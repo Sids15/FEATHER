@@ -23,6 +23,7 @@ FEATHER/
 ## 2. CIFAR-10-C (corruption streams, main benchmark) — ~2.9 GB
 
 - Official Zenodo record: <https://zenodo.org/records/2535967>
+- Direct file link: <https://zenodo.org/records/2535967/files/CIFAR-10-C.tar?download=1>
 - Download `CIFAR-10-C.tar` (ignore CIFAR-10-P unless we later want perturbation
   sequences), extract so the `.npy` files land in `data/CIFAR-10-C/`
   (e.g., `data/CIFAR-10-C/gaussian_noise.npy`, `data/CIFAR-10-C/labels.npy`).
@@ -39,7 +40,12 @@ official PyTorch mirror (the original yann.lecun.com host often 403s):
 - <https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz>
 - <https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz>
 
-Place them (still gzipped) in `data/MNIST/raw/`.
+Place them (still gzipped) in `data/MNIST/raw/`. One-paste PowerShell command
+(run from the repo root):
+
+```powershell
+mkdir data\MNIST\raw -Force; foreach ($f in "train-images-idx3-ubyte.gz","train-labels-idx1-ubyte.gz","t10k-images-idx3-ubyte.gz","t10k-labels-idx1-ubyte.gz") { curl.exe -L -o "data\MNIST\raw\$f" "https://ossci-datasets.s3.amazonaws.com/mnist/$f" }
+```
 
 ## 4. Tabular streams (Tier 4, optional — skip for now)
 
