@@ -2,16 +2,27 @@
 
 **Policy:** code in this repo never auto-downloads datasets (`download=False`
 everywhere). Download the files below yourself and place them in the exact layout
-shown. Everything is free; total ≈ 3.1 GB.
+shown. Everything is free; total ≈ 3.1 GB (≈ 6 GB with the CIFAR-10-C tar kept).
+
+## Data root
+
+Loaders resolve the data root from the `FEATHER_DATA_DIR` environment variable,
+falling back to `./data`. On this machine the C: drive is nearly full, so the
+datasets live on **`D:\FEATHER-data`** — set once per shell:
+
+```powershell
+$env:FEATHER_DATA_DIR = "D:\FEATHER-data"
+```
 
 ## Target layout
 
 ```
-FEATHER/
-└── data/                     ← git-ignored
-    ├── cifar-10-python.tar.gz    (CIFAR-10, leave the tar.gz as-is)
-    ├── CIFAR-10-C/               (extracted: 19 .npy corruption files + labels.npy)
-    └── MNIST/raw/                (4 .gz files, leave gzipped)
+$FEATHER_DATA_DIR/            ← git-ignored wherever it lives
+├── cifar-10-python.tar.gz    (CIFAR-10, leave the tar.gz as-is)
+├── CIFAR-10-C/               (extracted: 19 .npy corruption files + labels.npy)
+│   └── *.npy                 (20 files incl. labels.npy)
+├── CIFAR-10-C.tar            (source tar — safe to delete once extracted)
+└── MNIST/raw/                (4 idx files, gzipped or not — torchvision reads both)
 ```
 
 ## 1. CIFAR-10 (training data) — ~163 MB
