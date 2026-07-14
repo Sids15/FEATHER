@@ -10,9 +10,9 @@ __pycache__/
 # Secrets / local config
 .env
 
-# Data & model artifacts (never commit)
-data/
-datasets/
+# Data & model artifacts (never commit) — root-anchored so src/feather/data/ is tracked
+/data/
+/datasets/
 *.pt
 *.pth
 *.ckpt
