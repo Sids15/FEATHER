@@ -2,3 +2,11 @@
 numpy==2.5.1
 pytest==9.1.1
 matplotlib==3.11.0
+
+# PyTorch: install separately per device (build differs by hardware):
+#   workstation (RTX 4500 Ada): pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+#   laptop (CPU-only):          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# After installing on the workstation, pin the exact versions here
+# (pip freeze | Select-String "torch").
+# torch==<pin-after-install>
+# torchvision==<pin-after-install>

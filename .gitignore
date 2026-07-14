@@ -19,10 +19,12 @@ __pycache__/
 *.npz
 *.tar
 
-# Experiment outputs
+# Experiment outputs (folder structure kept via .gitkeep, contents ignored)
 runs/
-outputs/
-logs/
+outputs/*
+!outputs/.gitkeep
+logs/*
+!logs/.gitkeep
 *.log
 
 # Paper build artifacts
