@@ -36,7 +36,7 @@ Keep each slide sparse — headline + 3-5 bullets; say the rest aloud.
   - **Sensitive subspace** (rank ≤ #classes): movement here changes outputs → visible to existing monitors
   - **Blind subspace** (everything else — large): movement here changes outputs by **exactly zero**
 - FEATHER projects each streaming batch's activation shift onto the blind subspace and alarms on calibrated excess
-- *(Diagram: 2D cloud, boundary normal = sensitive direction, boundary-parallel = blind direction)*
+- *(Insert `docs/review1/figures/geometry.png` — generated from the prototype by `src/experiments/review1_figures.py`)*
 
 ### Slide 7 — Literature & Research Gap
 - Rabanser'19 (NeurIPS): shift detection ≠ harm detection — open problem
@@ -66,6 +66,7 @@ Keep each slide sparse — headline + 3-5 bullets; say the rest aloud.
   - Blind drift changes softmax outputs < 10⁻¹⁰ (Proposition 1 holds)
   - Monitor catches 100% of post-onset blind drift; calibrated false-alarm rate ≤ target
 - Repository with production standards: venv, pinned deps, TDD, CI-ready
+- *(Insert `docs/review1/figures/prototype_demo.png` — real output from the running prototype)*
 
 ### Slide 12 — Scope
 - **In:** streaming image benchmarks (Rotated MNIST, CIFAR-10 → CIFAR-10-C), frozen-model monitoring, cascade, dashboard, multi-seed benchmark
