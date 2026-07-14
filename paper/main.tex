@@ -1,0 +1,435 @@
+% FEATHER — paper draft.
+% Self-contained preamble: compiles with any standard TeX distribution or on
+% Overleaf with no extra files beyond references.bib and figures/.
+% Swap the preamble for the official venue style file (e.g. neurips_2026.sty)
+% at submission time; the body is style-agnostic.
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\F}{\mathbf{F}}
+\newcommand{\act}{\phi}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\spn}{span}
+\DeclareMathOperator*{\softmax}{softmax}
+
+\title{FEATHER: Fisher-Eigenvalue Adaptive Thresholding\\for Error-Robust Drift Detection}
+
+\author{%
+  \todo{Author One}\\ \todo{Affiliation}
+  \and
+  \todo{Author Two}\\ \todo{Affiliation}
+}
+\date{Draft --- \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Label-free monitors for deployed classifiers --- confidence tracking, entropy,
+black-box shift detection, and learned accuracy estimators --- share one
+structural weakness: their signal is a function of the model's outputs. We show
+that every such monitor has a formally characterizable blind spot. The Fisher
+information matrix of the log-likelihood with respect to a classifier's
+penultimate activations has rank at most $C-1$ for a $C$-class softmax head;
+its orthogonal complement --- the \emph{blind subspace} --- consists exactly of
+the activation directions that change all logits equally, and drift confined to
+it leaves the model's output distribution unchanged. Consequently no
+output-based statistic can ever detect it, while the environment producing the
+activations may have changed arbitrarily. We propose FEATHER, a streaming
+monitor that computes this subspace exactly and in closed form from a single
+labeled reference pass, then watches it online with three
+bootstrap-calibrated statistics at the cost of one matrix--vector product per
+batch. A cascaded variant, FEATHER-Lite, combines a classical statistical
+detector with FEATHER's geometric filter. On controlled two-dimensional
+streams the implementation recovers the theoretical blind subspace to
+machine precision, verifies output-invariance of blind drift to $10^{-10}$,
+and detects every post-onset blind-drift batch at a calibrated false-alarm
+rate. Experiments on Rotated~MNIST and CIFAR-10-C
+\todo{complete once Tier 2--3 experiments run} evaluate how often
+blind-subspace drift coincides with silent accuracy degradation in deep
+networks.
+\end{abstract}
+
+\section{Introduction}
+
+Machine learning systems degrade after deployment because the world that
+produces their inputs changes --- a phenomenon known as \emph{concept drift}.
+Production monitoring is constrained by two facts. First, ground-truth labels
+arrive late or never, so accuracy cannot be tracked directly. Second, not
+every distribution change matters: many shifts are \emph{benign} (accuracy is
+unaffected), some are \emph{harmful} (accuracy collapses), and a monitor that
+alarms on every statistical change drowns operators in false positives
+\citep{rabanser2019failing}.
+
+The modern response is label-free performance estimation: tracking softmax
+confidence, prediction entropy, differences of confidences
+\citep{guillory2021doc}, learned confidence thresholds \citep{garg2022atc},
+prediction-uncertainty detectors \citep{pudd2025}, or error-proxy models with
+sequential testing \citep{amoukou2024sequential}. These methods are effective
+when drift moves the model's outputs. Our starting observation is that this
+entire family shares a single structural property: \textbf{their signal is a
+function of the model's outputs, so any drift that leaves the outputs
+unchanged is invisible to all of them --- by construction, not by
+misfortune.}
+
+Such drift exists and is easy to characterize. For a classifier with a softmax
+head, the Fisher information matrix (FIM) of the log-likelihood with respect
+to the \emph{penultimate activation} has rank at most $C-1$ ($C$ classes);
+in a typical deep network the activation dimension $d$ is hundreds, so almost
+all of activation space lies in the orthogonal complement. We show this
+complement consists exactly of the directions that shift all logits equally
+--- directions to which the softmax is invariant. Activations can move
+arbitrarily far along them while confidence, entropy, and every
+prediction-derived statistic remain frozen. If the world changed in a way the
+model cannot react to, the model fails \emph{silently}.
+
+FEATHER (Fisher-Eigenvalue Adaptive Thresholding for Error-Robust drift
+detection) monitors exactly this blind region. Offline, on a labeled
+reference set, it computes the $d \times d$ activation-space FIM
+\emph{exactly} --- no Kronecker-factored approximation is required, in
+contrast to parameter-space Fisher methods \citep{martens2015kfac} --- and
+eigendecomposes it into a \emph{sensitive} subspace (where outputs react) and
+a \emph{blind} subspace (where they provably do not). Online, each incoming
+batch costs one matrix--vector projection; three statistics with
+bootstrap-calibrated thresholds control the false-alarm rate directly.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item \textbf{A detector-blindness characterization} (Proposition~\ref{prop:blind}):
+    the orthogonal complement of the activation-space Fisher column space is
+    exactly the set of softmax-invariant activation directions, hence no
+    output-based monitor can detect drift confined to it. This positions
+    geometric monitoring as \emph{necessary}, not merely alternative.
+  \item \textbf{FEATHER}, a label-free streaming monitor of the blind subspace:
+    exact closed-form offline computation, millisecond online projections,
+    three complementary statistics (direction, magnitude, energy), and
+    bootstrap threshold calibration; plus \textbf{FEATHER-Lite}, a cascade
+    with a classical statistical first stage.
+  \item \textbf{A controlled validation} in which every quantity has an
+    analytical ground truth, confirming the theory to machine precision, and
+    an evaluation protocol on Rotated~MNIST and CIFAR-10-C
+    \citep{hendrycks2019benchmarking} in which harmfulness is \emph{measured}
+    from held-out labels rather than assumed from corruption type.
+\end{enumerate}
+
+\section{Related Work}
+
+\paragraph{Statistical drift detection.}
+Classical stream-mining detectors test for change in a scalar stream:
+ADWIN's adaptive windowing \citep{bifet2007adwin}, DDM-style error-rate
+monitoring, Kolmogorov--Smirnov windows, and kernel two-sample tests.
+Error-rate detectors require labels; distribution detectors are
+performance-agnostic and alarm on benign change. \citet{rabanser2019failing}
+showed empirically that detection strength correlates poorly with damage and
+posed harmful-shift characterization as an open problem.
+
+\paragraph{Label-free performance estimation.}
+DoC \citep{guillory2021doc} and ATC \citep{garg2022atc} estimate target
+accuracy from confidence statistics; PUDD \citep{pudd2025} detects drift from
+prediction uncertainty. \citet{amoukou2024sequential} formalize
+\emph{sequential harmful shift detection without labels} via an error-proxy
+model and sequential testing, establishing the problem framing we adopt.
+All of these read the model's outputs (or models trained to mimic them) and
+therefore inherit the blind spot formalized in
+Proposition~\ref{prop:blind}; they are natural baselines and complements, not
+competitors, to a blind-subspace monitor.
+
+\paragraph{Fisher geometry of neural networks.}
+The FIM appears in deep learning chiefly as an optimization and compression
+object \citep{martens2015kfac}. \citet{karakida2019universal} showed that
+deep-network Fisher spectra concentrate: a few large eigenvalues and a
+near-zero bulk --- i.e., large near-null subspaces exist. Two works bring
+related ideas to monitoring: \citet{zhang2023score} track the Fisher
+\emph{score vector} with control charts (a detection signal, not a
+harmfulness criterion, and a different object from the FIM eigenstructure),
+and Zero-Direction Probing \citep{pandey2025zdp} uses activation null
+directions to study representational drift in large language models
+(theory-only, no task-supervised Fisher, no harmful/benign separation).
+FEATHER occupies the gap between \citet{amoukou2024sequential} (the framing,
+without geometry) and \citet{pandey2025zdp} (the geometry, without the
+deployment problem).
+
+\section{Method}
+
+\subsection{Setup and notation}
+
+Let $f(x) = \softmax(W\act(x) + b)$ be a deployed, frozen $C$-class
+classifier, where $\act(x) \in \R^d$ is the penultimate activation,
+$W \in \R^{C \times d}$, $b \in \R^C$. Data arrive in batches
+$B_t = \{x_i\}_{i=1}^{n_t}$. A labeled reference set
+$\{(\act_i, y_i)\}_{i=1}^{n}$ (held-out training data) is available
+\emph{offline only}; the stream itself is unlabeled.
+
+\subsection{The activation-space Fisher matrix and its blind subspace}
+
+We define the monitoring matrix as the empirical Fisher information of the
+log-likelihood \emph{with respect to the activation}:
+\begin{equation}
+  \F \;=\; \frac{1}{n}\sum_{i=1}^{n} g_i g_i^\top,
+  \qquad
+  g_i \;=\; \nabla_{\act}\log p(y_i \mid \act_i)
+        \;=\; W^\top\!\big(e_{y_i} - p_i\big),
+  \label{eq:fisher}
+\end{equation}
+where $p_i = \softmax(W\act_i + b)$ and $e_y$ is the one-hot vector. Since
+every $g_i$ lies in $W^\top\!\mathcal{H}$ with
+$\mathcal{H} = \{v \in \R^C : \mathbf{1}^\top v = 0\}$ (the residual
+$e_y - p$ always sums to zero),
+\begin{equation}
+  \rank \F \;\le\; \min\{\rank W,\; C-1\} \;\ll\; d .
+\end{equation}
+$\F$ is a $d \times d$ matrix computed \emph{exactly} in one pass over the
+reference set and eigendecomposed in milliseconds; no approximation enters
+the core method. Let $\lambda_1 \ge \dots \ge \lambda_d \ge 0$ be its
+eigenvalues with orthonormal eigenvectors $u_1, \dots, u_d$. We split
+activation space into the \emph{sensitive} subspace
+$\mathcal{S} = \spn\{u_j : \lambda_j > \tau\lambda_1\}$
+and the \emph{blind} subspace $\mathcal{N} = \mathcal{S}^\perp$
+(relative tolerance $\tau$; given the rank structure the split is
+insensitive to $\tau$ over many orders of magnitude).
+
+\subsection{Online statistics and calibration}
+\label{sec:stats}
+
+Let $\mu_{\mathrm{ref}}$ be the reference activation mean and $P_\mathcal{N}$
+the orthogonal projector onto $\mathcal{N}$ (stored as a $d\times k$ basis
+$B_\mathcal{N}$). For each batch with mean $\mu_t$ and shift
+$\Delta\mu_t = \mu_t - \mu_{\mathrm{ref}}$, FEATHER computes
+\begin{align}
+  s_t &= \frac{\lVert B_\mathcal{N}^\top \Delta\mu_t\rVert}
+              {\lVert \Delta\mu_t\rVert}
+  &&\text{(direction ratio: where is the drift pointing?)} \\
+  m_t &= \lVert B_\mathcal{N}^\top \Delta\mu_t\rVert
+  &&\text{(shift magnitude: is it big enough to matter?)} \\
+  v_t &= \frac{1}{n_t}\sum_{x \in B_t}
+         \big\lVert B_\mathcal{N}^\top(\act(x) - \mu_{\mathrm{ref}})\big\rVert^2
+  &&\text{(energy: catches variance-only drift).}
+\end{align}
+The ratio $s_t$ alone is scale-invariant and would alarm on noise-level
+shifts that happen to point into $\mathcal{N}$; the magnitude $m_t$ gates it.
+The energy $v_t$ detects drift that spreads into $\mathcal{N}$ without moving
+the mean. Thresholds for $m_t$ and $v_t$ are set as the $q$-th quantile of
+their bootstrap distributions over clean reference batches, giving a
+per-statistic stationary false-alarm rate of approximately $1-q$ with no
+hand-tuned constants. The online cost per batch is one $d\times k$
+matrix--vector product.
+
+\subsection{FEATHER-Lite: a cascaded detector}
+
+FEATHER answers ``is the drift in the blind region?''; classical detectors
+answer ``did anything change?'' cheaply. FEATHER-Lite composes them: a
+statistical first stage (e.g.\ KSWIN or ADWIN \citep{bifet2007adwin} on a
+scalar summary of activations, via the River library
+\citep{montiel2021river}) flags candidate change-points with high
+sensitivity; FEATHER then classifies the flagged shift as output-visible
+(existing monitors and confidence-based triage apply) or blind (silent-failure
+risk; escalate). Label-consuming detectors are reported only as an
+upper-bound reference in our experiments.
+
+\section{Theory}
+
+\begin{assumption}
+\label{ass:span}
+The reference gradients $\{g_i\}$ span $W^\top\!\mathcal{H}$. (This holds
+almost surely once $n \ge C$ batches of generic data are observed, and is
+verified numerically in our experiments.)
+\end{assumption}
+
+\begin{proposition}[Detector blindness]
+\label{prop:blind}
+Under Assumption~\ref{ass:span}, the blind subspace is exactly the set of
+softmax-invariant directions:
+\[
+  \mathcal{N} \;=\; \{\, u \in \R^d \;:\; Wu \in \spn\{\mathbf{1}\} \,\}.
+\]
+Consequently, for any drift that only translates activations within
+$\mathcal{N}$, the model's output distribution is identical to its
+pre-drift value on every input, and \emph{any} monitoring statistic computed
+from model outputs --- confidence, entropy, prediction histograms, DoC, ATC,
+uncertainty indices, or error-proxies trained on outputs --- is invariant to
+the drift.
+\end{proposition}
+
+\begin{proof}
+By Assumption~\ref{ass:span},
+$\mathcal{S} = \spn\{g_i\} = W^\top\!\mathcal{H}$, so
+$u \in \mathcal{N} = \mathcal{S}^\perp$ iff
+$0 = u^\top W^\top v = (Wu)^\top v$ for all $v \in \mathcal{H}$, i.e.\ iff
+$Wu \in \mathcal{H}^\perp = \spn\{\mathbf{1}\}$. For such $u$ and any
+$t \in \R$, the logits of a shifted activation satisfy
+$W(\act + tu) + b = (W\act + b) + tc\,\mathbf{1}$ for some $c$, and
+$\softmax(z + tc\,\mathbf{1}) = \softmax(z)$. Outputs are therefore pointwise
+unchanged, and so is every functional of them.
+\end{proof}
+
+\begin{proposition}[Calibrated response in the sensitive subspace]
+\label{prop:bounded}
+For any activation perturbation $\Delta \in \R^d$ and any class $y$,
+\[
+  \big|\log p(y \mid \act + \Delta) - \log p(y \mid \act)\big|
+  \;\le\; 2\,\lVert W\Delta \rVert_\infty .
+\]
+In particular the log-likelihood response to a shift confined to
+$\mathcal{S}$ is bounded and continuous in the shift magnitude, and zero for
+a shift confined to $\mathcal{N}$.
+\end{proposition}
+
+\begin{proof}
+Write $\log p(y \mid \act) = z_y - \mathrm{logsumexp}(z)$ with
+$z = W\act + b$. The first term changes by $(W\Delta)_y$, bounded by
+$\lVert W\Delta\rVert_\infty$; logsumexp is $1$-Lipschitz with respect to the
+$\ell_\infty$ norm, contributing at most another
+$\lVert W\Delta\rVert_\infty$. For $\Delta \in \mathcal{N}$,
+Proposition~\ref{prop:blind} gives exact invariance.
+\end{proof}
+
+\paragraph{Interpretation and scope.}
+Proposition~\ref{prop:blind} is an impossibility result for output-based
+monitoring, not a harm guarantee: first-order geometry cannot force errors
+--- blind drift is dangerous precisely because the model \emph{cannot} react
+to it, so if the label function or the validity of the upstream feature
+extractor changed along those directions, failure is silent. Whether
+blind-subspace activation drift \emph{correlates} with silent accuracy loss
+in deep networks is an empirical question, and our evaluation is designed to
+measure it rather than assume it. Online eigen-tracking of a time-varying
+subspace is possible via streaming decompositions \citep{halko2011structure};
+we deliberately keep the subspace fixed between (cheap, exact) offline
+recomputations, since it is a property of the frozen model.
+
+\section{Experiments}
+
+\subsection{Controlled validation with analytical ground truth (completed)}
+\label{sec:tier1}
+
+We first validate every component on two-dimensional, two-class Gaussian
+streams with shared covariance, where the Bayes-optimal boundary --- and
+hence the exact sensitive/blind split --- is known in closed form: the
+sensitive direction is the boundary normal, the blind direction is
+boundary-parallel (Figure~\ref{fig:geometry}). Drift is injected as a
+covariate shift of controllable direction, magnitude, and onset. The
+implementation is fully deterministic (seeded) and covered by 38 unit and
+integration tests.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.72\linewidth]{figures/geometry.png}
+  \caption{The activation-space Fisher matrix splits the plane into the
+  sensitive direction (boundary normal: outputs react, existing monitors
+  see drift) and the blind direction (boundary-parallel, $\mathrm{null}(W)$:
+  outputs provably frozen). Points: reference stream; arrows: eigenvectors
+  computed by the implementation, not drawn by hand.}
+  \label{fig:geometry}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/prototype_demo.png}
+  \caption{Streaming behavior on two drift types (onset at batch 15, dashed).
+  \textbf{Left:} drift confined to the blind subspace --- mean softmax
+  confidence is exactly flat (output monitors see nothing) while FEATHER's
+  $m_t$ exceeds its calibrated threshold on every post-onset batch.
+  \textbf{Right:} sensitive-direction drift --- confidence moves (visible to
+  output monitors) while $m_t$ stays at the noise floor. Both panels share
+  the $m_t$ scale.}
+  \label{fig:demo}
+\end{figure}
+
+\paragraph{Results.} All theoretical quantities are recovered numerically:
+\begin{itemize}
+  \item \textbf{Subspace recovery:} the computed blind eigenvector aligns
+    with the analytical boundary-parallel direction with
+    $|\cos| > 1 - 10^{-6}$; the Fisher matrix is rank-one
+    ($\lambda_2 \le 10^{-10}\lambda_1$), matching
+    $\rank \F \le C - 1 = 1$.
+  \item \textbf{Detector blindness (Prop.~\ref{prop:blind}):} under a
+    blind-subspace shift of magnitude $4.0$, per-sample softmax outputs
+    change by less than $10^{-10}$ --- confidence, entropy, and BBSD-class
+    statistics are exactly flat (Figure~\ref{fig:demo}, top left).
+  \item \textbf{Detection:} the calibrated monitor ($q = 0.99$,
+    $300$ bootstrap batches) alarms on $15/15$ post-onset blind-drift
+    batches with direction ratio $s_t > 0.95$, while the measured stationary
+    alarm rate over $200$ clean batches stays within the calibrated budget
+    ($\le 8\%$ for the union of two $1\%$-quantile statistics).
+  \item \textbf{Separation:} sensitive-direction drift of magnitude $3.0$
+    produces mean $s_t < 0.2$ and no blind-monitor alarms
+    (Figure~\ref{fig:demo}, right column).
+\end{itemize}
+
+\subsection{Deep-network evaluation (protocol; experiments in progress)}
+\label{sec:tier23}
+
+\todo{This subsection reports the evaluation protocol; numbers will be filled
+in as Tier 2--3 experiments complete.}
+
+\paragraph{Datasets and models.} A CNN trained on MNIST, monitored on
+Rotated-MNIST streams (rotation angle as a continuous drift-severity knob);
+ResNet-18 trained on CIFAR-10, monitored on CIFAR-10-C streams
+\citep{hendrycks2019benchmarking} (19 corruptions $\times$ 5 severities).
+
+\paragraph{Ground truth.} Harmfulness is \emph{measured}, not assumed: for
+every (corruption, severity) episode we record the frozen model's true
+accuracy on held-out labels (used for evaluation only) and label episodes
+benign ($<2\%$ drop), gray ($2$--$10\%$), or harmful ($>10\%$).
+
+\paragraph{Baselines.} Label-free output-based: mean confidence, entropy,
+BBSD \citep{rabanser2019failing}, ATC \citep{garg2022atc}. Label-free
+feature-based: PCA/Mahalanobis low-variance projection (the covariance
+ablation of FEATHER: identical pipeline with $\F$ replaced by the activation
+covariance), KSWIN on activation summaries. Label-consuming upper bound:
+ADWIN on the true error stream (reported separately). If reimplementation
+cost allows, the error-proxy method of \citet{amoukou2024sequential}.
+
+\paragraph{Metrics.} AUROC for harmful-episode detection, false-positive
+rate on benign episodes, detection delay (batches), and wall-clock cost;
+$\ge 5$ seeds with mean $\pm$ std.
+
+\paragraph{The silent-drift experiment.} The headline test constructs
+streams whose activation shift is confined to the blind subspace while the
+label function changes: every output-based baseline is provably flat
+(Proposition~\ref{prop:blind}) and the question is whether FEATHER's alarm
+precedes the (hidden) accuracy drop. \todo{results}
+
+\section{Limitations}
+
+The blind subspace is a property of the frozen head; it is exact for the
+softmax layer but summarizes deeper feature drift only through the
+penultimate activations (a multi-layer extension via Kronecker-factored
+parameter-space Fisher \citep{martens2015kfac} is a natural ablation).
+Proposition~\ref{prop:blind} bounds what output-based monitors can see; it
+does not by itself guarantee that blind drift is harmful --- pure concept
+shift with unchanged activation marginals remains undetectable for
+\emph{any} label-free method, ours included. The reference window is assumed
+representative; on model retraining the subspace must be recomputed (exact
+and cheap). Empirical validation beyond the controlled setting is in
+progress (Section~\ref{sec:tier23}).
+
+\section{Conclusion}
+
+Modern label-free monitoring reads a model's outputs, and we show this
+creates a provable, exactly characterizable blind spot: the orthogonal
+complement of the activation-space Fisher, equal to the softmax-invariant
+directions. FEATHER computes that subspace in closed form and watches it in
+real time with calibrated false-alarm control, turning a two-line
+impossibility argument into a deployable monitor and completing the coverage
+of existing detectors rather than competing with them on drift they already
+see.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

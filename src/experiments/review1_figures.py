@@ -31,7 +31,11 @@ from feather.data.synthetic2d import (
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path(__file__).resolve().parents[2] / "docs" / "review1" / "figures"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_DIRS = (
+    _REPO_ROOT / "docs" / "review1" / "figures",
+    _REPO_ROOT / "paper" / "figures",
+)
 DPI = 200
 ONSET = 15
 
@@ -129,7 +133,7 @@ def figure_geometry(phi, y, sub) -> None:
         color=INK, fontsize=10.5, pad=12,
     )
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "geometry.png", facecolor=SURFACE)
+    save_all(fig, "geometry.png")
     plt.close(fig)
 
 
@@ -199,17 +203,24 @@ def figure_prototype_demo(weight, bias, monitor) -> None:
         color=INK, fontsize=11,
     )
     fig.tight_layout(rect=(0, 0, 1, 0.95))
-    fig.savefig(OUTPUT_DIR / "prototype_demo.png", facecolor=SURFACE)
+    save_all(fig, "prototype_demo.png")
     plt.close(fig)
+
+
+def save_all(fig: plt.Figure, name: str) -> None:
+    """Save a figure into every output directory (slides and paper)."""
+    for directory in OUTPUT_DIRS:
+        fig.savefig(directory / name, facecolor=SURFACE)
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for directory in OUTPUT_DIRS:
+        directory.mkdir(parents=True, exist_ok=True)
     phi, y, weight, bias, sub, monitor = fit_offline()
     figure_geometry(phi, y, sub)
     figure_prototype_demo(weight, bias, monitor)
-    logger.info("figures written to %s", OUTPUT_DIR)
+    logger.info("figures written to %s", ", ".join(map(str, OUTPUT_DIRS)))
 
 
 if __name__ == "__main__":
