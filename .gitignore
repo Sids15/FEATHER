@@ -36,6 +36,14 @@ paper/**/*.synctex.gz
 paper/**/*.fdb_latexmk
 paper/**/*.fls
 
+# Internal working files — kept locally, never committed (history-purged 2026-07-15)
+/rules.md
+/Capstone guidelines.md
+/I have read the entire context of o.txt
+/Notes_260708_222139 (1).txt
+/docs/project-analysis.md
+/research/online-research-findings.md
+
 # OS / editor
 .DS_Store
 Thumbs.db
