@@ -8,5 +8,5 @@ matplotlib==3.11.0
 #   laptop (CPU-only):          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 # After installing on the workstation, pin the exact versions here
 # (pip freeze | Select-String "torch").
-# torch==<pin-after-install>
-# torchvision==<pin-after-install>
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
