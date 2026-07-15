@@ -106,7 +106,24 @@ These map directly onto the paper's needs: `metrics.csv` → training curves;
 experimental-setup section; `config.json` + logged seeds → reproducibility
 statement; `final_model.pt` → the frozen model every FEATHER experiment uses.
 
-## 7. What to bring back from the workstation
+## 7. Monitoring benchmark (after training — the paper's raw results)
+
+```powershell
+# Tier 2 — Rotated MNIST (7 angle episodes)
+python src\experiments\run_monitoring.py --model outputs\mnist_seed0\final_model.pt --mode rotated_mnist --out-name monitor_mnist_seed0
+
+# Tier 3 — CIFAR-10-C (clean + 19 corruptions x 5 severities = 96 episodes)
+python src\experiments\run_monitoring.py --model outputs\cifar10_seed0\final_model.pt --mode cifar10c --out-name monitor_cifar10_seed0
+```
+
+Each produces `outputs/<out-name>/episodes.csv` — one row per stream batch
+with true accuracy (labels used for evaluation only), the output-based
+baselines (mean confidence, entropy), and the FEATHER + PCA-ablation monitor
+statistics — plus `fit.json` (subspace dims, thresholds, offline/online
+timing for the paper's feasibility table) and a full log.
+
+## 8. What to bring back from the workstation
 
 Copy the whole `outputs/` and `logs/` folders back (small: a few hundred MB).
-`final_model.pt` files are what the Fisher/monitoring experiments consume next.
+`final_model.pt` feeds any rerun; `episodes.csv` + `fit.json` are all the
+analysis and paper figures need — the analysis runs on the laptop, no GPU.

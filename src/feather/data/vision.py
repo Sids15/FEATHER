@@ -102,6 +102,28 @@ def load_cifar10c(
     return np.asarray(images), np.asarray(labels).astype(np.int64)
 
 
+def rotated_mnist_test(
+    angle: float,
+    data_root: str | Path | None = None,
+) -> Dataset:
+    """MNIST test set with every image rotated by ``angle`` degrees.
+
+    The standard Rotated-MNIST drift construction: the rotation angle is the
+    continuous drift-severity knob (0 = clean reference distribution).
+    """
+    root = mnist_root(data_root)
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Lambda(
+                lambda x: transforms.functional.rotate(x, float(angle))
+            ),
+            transforms.Normalize(MNIST_MEAN, MNIST_STD),
+        ]
+    )
+    return datasets.MNIST(root, train=False, transform=transform, download=False)
+
+
 def cifar10c_dataset(
     corruption: str,
     severity: int,
