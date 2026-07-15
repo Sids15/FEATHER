@@ -49,3 +49,5 @@ paper/**/*.fls
 Thumbs.db
 .vscode/
 .idea/
+
+FEATHER-data/

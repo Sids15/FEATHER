@@ -111,6 +111,13 @@ class Trainer:
         else:
             torch.backends.cudnn.benchmark = True
 
+        # Seed, then re-initialise all layer parameters so that model weights
+        # are fully deterministic from the seed, regardless of when the module
+        # was constructed by the caller.
+        seed_everything(config.seed)
+        for m in model.modules():
+            if hasattr(m, "reset_parameters"):
+                m.reset_parameters()
         self.model = model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = self._build_optimizer()
@@ -209,7 +216,7 @@ class Trainer:
                 "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
             },
             "model_meta": self.model.meta() if hasattr(self.model, "meta") else None,
-            "torch_version": torch.__version__,
+            "torch_version": str(torch.__version__),  # plain str, not TorchVersion
         }
 
     def save_checkpoint(self, epoch: int, is_best: bool) -> None:
@@ -243,8 +250,10 @@ class Trainer:
     def load_checkpoint(self, resume: str | Path) -> None:
         """Restore model/optimizer/scheduler/scaler/RNG state from a checkpoint."""
         path = self._resolve_resume(resume)
-        # Checkpoints are stored with weights_only-safe types, so the safe
-        # loader works even though these are our own files (rules.md §3).
+        # Allowlist TorchVersion so weights_only=True works across PyTorch
+        # versions that embed it in the checkpoint metadata (e.g. 2.5.x).
+        from torch.torch_version import TorchVersion  # noqa: PLC0415
+        torch.serialization.add_safe_globals([TorchVersion])
         payload = torch.load(path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(payload["model_state"])
         self.optimizer.load_state_dict(payload["optimizer_state"])

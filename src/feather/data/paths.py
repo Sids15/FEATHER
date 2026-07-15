@@ -48,7 +48,10 @@ def mnist_root(override: str | Path | None = None) -> Path:
     root = data_root(override)
     raw = root / "MNIST" / "raw"
     require_dir(raw, "MNIST raw folder")
-    probes = ("train-images-idx3-ubyte", "train-images-idx3-ubyte.gz")
+    probes = (
+        "train-images-idx3-ubyte", "train-images-idx3-ubyte.gz",  # standard naming
+        "train-images.idx3-ubyte", "train-images.idx3-ubyte.gz",  # dot-variant naming
+    )
     if not any((raw / name).is_file() for name in probes):
         raise FileNotFoundError(f"MNIST idx files not found in '{raw}'. {_HINT}")
     return root
