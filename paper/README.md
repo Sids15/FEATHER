@@ -19,13 +19,17 @@ paper/
 
 ## Compiling
 
-No LaTeX toolchain is installed locally. Upload `main.tex`, `references.bib`,
-and `figures/` to [Overleaf](https://overleaf.com) (or install MiKTeX/TeX Live)
-and compile with pdfLaTeX + BibTeX. The paper uses the standard IEEE
-conference format (`IEEEtran` class, `IEEEtranN` bibliography style — both
-ship with TeX Live and Overleaf). Red `[TODO: …]` markers show the remaining
-placeholders: author names/affiliations only. All bib author lists are
-verified against the publisher pages (2026-07-16).
+No LaTeX toolchain is installed locally. Upload the whole `paper/` folder
+(`main.tex`, `references.bib`, `figures/`, `SNmult.cls`, `spmpsci.bst`) to
+[Overleaf](https://overleaf.com) (or install MiKTeX/TeX Live) and compile
+with pdfLaTeX + BibTeX. The paper follows the **Springer Nature SNmult
+contributed-volume template** (the format provided with the submission
+instructions): class and bibliography style are included here, diagrams are
+pre-rendered PNGs (the SN instructions ask authors to avoid TikZ), and
+references use the numbered `spmpsci` style. `[TODO: …]` markers show the
+remaining placeholders: author names/affiliations/emails and the
+acknowledgement only. All bib author lists are verified against the
+publisher pages (2026-07-16).
 
 ## Target structure (from planning notes)
 
