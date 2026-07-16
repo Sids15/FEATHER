@@ -1,0 +1,116 @@
+{
+  "episode_counts": {
+    "cifar10c": {
+      "benign": 60,
+      "gray": 134,
+      "harmful": 286
+    },
+    "rotated_mnist": {
+      "benign": 6,
+      "gray": 4,
+      "harmful": 25
+    }
+  },
+  "auroc": {
+    "cifar10c": {
+      "feather": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "pca": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "confidence": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "entropy": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    "rotated_mnist": {
+      "feather": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "pca": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "confidence": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "entropy": {
+        "mean": 1.0,
+        "std": 0.0,
+        "per_seed": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  },
+  "alarm_rates": {
+    "cifar10c": {
+      "feather_benign": 0.4583,
+      "feather_harmful": 1.0,
+      "pca_benign": 0.7967,
+      "pca_harmful": 1.0
+    }
+  }
+}
