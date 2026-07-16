@@ -1,19 +1,25 @@
 # Conference introduction paper — FEATHER
 
-A short, self-contained **introductory paper** for conference/Review-I use:
-problem, motivation, gap, project objectives, planned evaluation, and
-future work. It deliberately does **not** disclose the method's
-construction, theory, or experimental results — those live in the full
-manuscript in `../paper/`, which this folder never touches.
+A self-contained **introductory paper** (~10–12 pages) for
+conference/Review-I use: problem and stakes, drift background and taxonomy,
+a survey of the three monitoring families, problem statement with
+requirements, the FEATHER proposal (guiding hypothesis + research
+questions only), work plan, evaluation protocol, feasibility, risk
+assessment, expected outcomes, and future work. It deliberately does
+**not** disclose the method's construction, theory, or experimental
+results — those live in the full manuscript in `../paper/`, which this
+folder never touches.
 
 ## Contents
 
 ```
 paper-conference/
-├── main.tex        ← the short paper (Springer SNmult format)
-├── references.bib  ← shared verified reference list (copy of ../paper/)
-├── SNmult.cls      ← Springer Nature class file
-└── spmpsci.bst     ← numbered bibliography style
+├── main.tex             ← the paper (Springer SNmult format)
+├── references.bib       ← shared verified reference list (copy of ../paper/)
+├── figures/
+│   └── drift_types.png  ← schematic; src/experiments/drift_types_figure.py
+├── SNmult.cls           ← Springer Nature class file
+└── spmpsci.bst          ← numbered bibliography style
 ```
 
 ## Compiling
