@@ -21,10 +21,11 @@ paper/
 
 No LaTeX toolchain is installed locally. Upload `main.tex`, `references.bib`,
 and `figures/` to [Overleaf](https://overleaf.com) (or install MiKTeX/TeX Live)
-and compile with pdfLaTeX + BibTeX. The preamble is self-contained (standard
-packages only); swap it for the official venue style file at submission time.
-Red `[TODO: …]` markers show every placeholder — author names, Tier 2–3
-results, and two bib author lists still to verify.
+and compile with pdfLaTeX + BibTeX. The paper uses the standard IEEE
+conference format (`IEEEtran` class, `IEEEtranN` bibliography style — both
+ship with TeX Live and Overleaf). Red `[TODO: …]` markers show the remaining
+placeholders: author names/affiliations only. All bib author lists are
+verified against the publisher pages (2026-07-16).
 
 ## Target structure (from planning notes)
 
