@@ -122,9 +122,10 @@ the operationally important one; Sect.~\ref{sec:survey} surveys the main
 families of label-free monitoring methods and locates the gap between
 them; Sect.~\ref{sec:problem} formulates the problem we target and the
 requirements a satisfying solution must meet; Sect.~\ref{sec:project}
-introduces the FEATHER proposal at the level of its guiding hypothesis and
-research questions; Sect.~\ref{sec:plan} lays out the planned methodology,
-evaluation protocol, tools, feasibility analysis, and risk assessment; and
+introduces the FEATHER proposal --- its guiding hypothesis, a first look
+at the idea in pictures, the synthetic-testbed evidence, and our research
+questions; Sect.~\ref{sec:plan} lays out the evaluation protocol, tools,
+feasibility analysis, and risk assessment; and
 Sects.~\ref{sec:outcomes}--\ref{sec:future} state the expected outcomes
 and the directions we see beyond the current project.
 
@@ -150,7 +151,7 @@ legitimate last year is fraudulent this year. Real streams mix all three.
 
 \subsection{Temporal Patterns}
 
-Orthogonal to \emph{what} changes is \emph{how} it changes over time.
+Separate from \emph{what} changes is \emph{how} it changes over time.
 Following the standard taxonomy \cite{gama2014survey, lu2018learning},
 drift can be \emph{sudden} (the distribution switches at a change point),
 \emph{gradual} (the stream alternates between old and new concept with
@@ -248,9 +249,8 @@ The strength of this family is sensitivity; its weakness is that it is
 distributional distance, not consequence. The empirical study of Rabanser
 et al.\ \cite{rabanser2019failing} found these detectors fire reliably on
 synthetic corruptions --- and equally reliably on harmless ones. An
-operator who receives an alarm for every harmless seasonal wobble
-habituates, and a monitor whose alarms are habitually ignored protects
-nothing. The study explicitly names the characterization of harmful shift
+operator who gets an alarm for every harmless seasonal wobble soon stops
+reading them, and a monitor whose alarms go unread protects nothing. The study explicitly names the characterization of harmful shift
 as an open problem, and that is the opening this project aims at.
 
 \subsection{Output-Based Estimators: The Right Question, a Compromised Witness}
@@ -358,7 +358,7 @@ shift; an episode above a large threshold counts as harmful no matter how
 subtle. This protects the evaluation from the benchmark limitation noted
 in Sect.~\ref{sec:survey}.
 
-From the survey we distill four requirements for a satisfying monitor:
+From the survey we draw four requirements for a satisfying monitor:
 
 \begin{enumerate}
 \item{\textbf{Label-free online.} After the one-time offline phase, the
@@ -403,8 +403,8 @@ networks (where Fisher spectra are known to concentrate in few directions
 \cite{karakida2019universal}), and in continual learning, where it decides
 which parameters are too important to move \cite{kirkpatrick2017overcoming}.
 Its appeal for monitoring is the same as its appeal in those fields: it
-measures sensitivity of the model's predictive distribution, which is
-exactly the currency the harmful/benign distinction trades in. Geometric
+measures how sensitive the model's predictions are to change, which is
+exactly what the harmful/benign distinction is about. Geometric
 ideas have recently begun to appear in the monitoring literature ---
 score-vector control charts \cite{zhang2023score}, null-direction analyses
 of language-model representations \cite{pandey2025zdp} --- which we read
@@ -418,6 +418,86 @@ precise formulation, the guarantees we can prove about it, and our
 experimental findings are the subject of the full manuscript in
 preparation; this paper's role is to establish the problem, the gap, and
 the plan.
+
+\subsection{A First Look, in Pictures}
+\label{sec:glimpse}
+
+Figure~\ref{fig:geometry-toy} shows the smallest example that carries the
+idea. A frozen two-class classifier lives in a two-dimensional feature
+space; the dashed line is its decision boundary. Now let the data drift.
+Drift along the red arrow pushes the classes across the boundary:
+predictions, confidence, and entropy all react, and every output-based
+monitor of Sect.~\ref{sec:survey} has something to work with. Drift along
+the violet arrow moves the data just as far --- but parallel to the
+boundary. Not one prediction changes. Confidence and entropy read exactly
+as before. To every output statistic the world looks healthy, however far
+the data travels in that direction.
+
+The two arrows are not drawn by hand; they are computed from the frozen
+model by the Fisher-information analysis at the heart of the project. In
+two dimensions the split looks like a curiosity. Whether it matters in
+practice comes down to two questions: how large the invisible region is
+for real architectures, and whether damaging drift actually lands in it.
+The first has an exact answer --- and, we think, a surprising one ---
+which RQ1 formalizes and the full manuscript proves; the second is what
+the benchmark evaluation measures. We keep both answers out of this
+introductory paper on purpose: the figure shows \emph{what} we exploit,
+not \emph{how} we compute it for a real network, efficiently and exactly,
+which is the technical core we defer.
+
+\begin{figure}[t]
+\includegraphics[width=\textwidth]{figures/geometry_toy}
+\Description{Scatter plot of a two-class dataset in two feature
+dimensions, split by a dashed vertical decision boundary. A red arrow
+points across the boundary, labeled output-visible drift where confidence
+and entropy react. A violet arrow points along the boundary, labeled
+output-invisible drift where every output statistic is frozen.}
+\caption{The toy problem that carries the idea. A frozen classifier can
+face drift its outputs react to (red) and drift its outputs provably
+cannot express (violet). Both arrows are computed from the model itself;
+the project turns the violet direction into something a monitor can
+watch}
+\label{fig:geometry-toy}
+\end{figure}
+
+\subsection{Synthetic Validation}
+\label{sec:synthetic}
+
+Before any deep network, we gave the hypothesis a testbed where every
+quantity has a known closed-form answer: streams of two-dimensional
+two-Gaussian data against a frozen classifier whose ideal boundary is
+available analytically. On this testbed the direction our analysis
+predicts to be output-invisible matches the analytical one to numerical
+precision (agreement better than $1 - 10^{-6}$ in absolute cosine), and
+the two experiments of Fig.~\ref{fig:synthetic-demo} probe the two arrows
+of Fig.~\ref{fig:geometry-toy} directly. A drift of four standard
+deviations along the predicted invisible direction changes the model's
+outputs by less than $10^{-10}$ per sample --- the invisibility is real,
+not approximate --- while the calibrated monitor raises an alarm on all
+fifteen post-onset batches. An equally deliberate drift along the visible
+direction leaves the monitor at its noise floor, exactly as intended:
+that drift is the kind output-based monitors already catch, and a
+specialist should not duplicate their alarms. Over two hundred clean
+batches the stationary false-alarm rate stays within its calibrated
+budget. The verification suite behind these claims --- 38 tests covering
+the theory's predictions and the monitor's behavior --- is committed
+alongside the code and re-runs in seconds on a laptop CPU, so every
+number in this paragraph can be checked on demand.
+
+\begin{figure}[t]
+\includegraphics[width=\textwidth]{figures/synthetic_demo}
+\Description{Four panels over a stream of thirty batches with drift onset
+at batch fifteen. Under output-invisible drift, mean softmax confidence
+stays flat while the FEATHER monitor score jumps above its calibrated
+threshold and raises alarms on every post-onset batch. Under
+output-visible drift, confidence moves while the monitor score stays at
+its noise floor with no alarms.}
+\caption{The synthetic testbed in action. Left: drift the outputs cannot
+express --- confidence stays flat, the monitor catches every post-onset
+batch. Right: drift the outputs do express --- the monitor stays quiet
+and leaves it to the output-based tools that can see it}
+\label{fig:synthetic-demo}
+\end{figure}
 
 \subsection{Research Questions}
 
@@ -456,43 +536,8 @@ geometric machinery without the harmful/benign question
 \cite{zhang2023score, pandey2025zdp}; FEATHER is built in the
 intersection.
 
-\section{Planned Methodology and Work Plan}
+\section{Planned Evaluation and Feasibility}
 \label{sec:plan}
-
-\subsection{Phases}
-
-The project runs in five phases, designed so that each produces a
-verifiable artifact before the next begins.
-
-\runinhead{Phase 1: Theory.} Work out the RQ1 characterization for softmax
-classifiers on paper, with proofs at the level of rigor of a methods
-paper.
-
-\runinhead{Phase 2: Synthetic Verification.} Implement the monitor and
-test it first on low-dimensional synthetic streams whose distributions we
-control analytically, so every quantity the theory predicts has a known
-ground-truth value to compare against. This phase is complete at the time
-of writing: the testbed exists, and the implementation reproduces the
-theory's predictions to numerical precision, which we take as the
-strongest available evidence of feasibility before the benchmark
-experiments run. The verification suite is committed alongside the code
-and re-runs in seconds on a laptop CPU, so the claim can be checked on
-demand.
-
-\runinhead{Phase 3: Deep-Network Infrastructure.} Train the benchmark
-models (a small CNN for the digit experiments, a ResNet-family model for
-CIFAR-10) under fixed seeds with full checkpointing, and build the
-monitoring harness that streams episodes, logs every statistic, and
-regenerates every figure and table from logs by script. Reproducibility
-is a first-class requirement: no number enters the paper that a script
-cannot recompute.
-
-\runinhead{Phase 4: Benchmark Evaluation.} Execute the protocol of
-Sect.~\ref{sec:protocol} on Rotated MNIST and CIFAR-10-C across multiple
-seeds, including baselines and ablations.
-
-\runinhead{Phase 5: Writing.} Complete the full manuscript, fold in the
-measured results, and prepare the defense material.
 
 \subsection{Evaluation Protocol}
 \label{sec:protocol}
@@ -562,9 +607,10 @@ monitoring computations are orders of magnitude cheaper than the
 inference they observe, so the experimental budget is hours, not weeks.
 On \emph{skills}: the theory sits in undergraduate linear algebra and
 probability; the engineering is standard PyTorch. On \emph{schedule}:
-Phases 1--2 are complete, Phase 3 is largely built, and the remaining
-critical path is benchmark execution and writing, both parallelizable
-between the two team members. Table~\ref{tab:risks} lists the main risks
+the theory and the synthetic verification are already complete
+(Sect.~\ref{sec:synthetic}), the training and monitoring infrastructure
+is largely built, and the remaining critical path is benchmark execution
+and writing, both parallelizable between the two team members. Table~\ref{tab:risks} lists the main risks
 and the mitigations we planned for each.
 
 \begin{table}[!t]
@@ -575,8 +621,9 @@ and the mitigations we planned for each.
 Risk & Mitigation \\
 \noalign{\smallskip}\svhline\noalign{\smallskip}
 Theory does not transfer from the synthetic setting to deep networks &
-Phase 2 gate: verify every prediction analytically before touching deep
-models; report transfer honestly either way \\
+Synthetic gate (Sect.~\ref{sec:synthetic}): every prediction verified
+analytically before deep models enter; transfer reported honestly either
+way \\
 \noalign{\smallskip}
 Benchmarks saturate (all detectors succeed, nothing discriminates) &
 Anticipated and planned for: false-alarm discipline at matched calibration
@@ -588,9 +635,9 @@ Compute or storage shortfall on the shared workstation &
 Small models by design; checkpoint-resume everywhere, so interrupted runs
 lose minutes, not days \\
 \noalign{\smallskip}
-Timeline pressure in the writing phase &
-Figures and tables are script-generated from logs from Phase 3 onward, so
-results flow into the manuscript without manual rework \\
+Timeline pressure in the writing stage &
+Figures and tables are script-generated from logs, so results flow into
+the manuscript without manual rework \\
 \noalign{\smallskip}\hline\noalign{\smallskip}
 \end{tabular}
 \end{table}
@@ -598,37 +645,32 @@ results flow into the manuscript without manual rework \\
 \section{Expected Outcomes}
 \label{sec:outcomes}
 
-The project's deliverables are: (i) the formal characterization answering
-RQ1; (ii) an implemented, tested, and documented monitoring library
-answering RQ2, usable against any PyTorch classifier exposing its
-penultimate features; (iii) the benchmark study answering RQ3, with every
-figure and table regenerable from committed scripts and logs; and (iv)
-the full manuscript. Two softer outcomes matter to us as well. First, an
-honest negative-space report: wherever the standard benchmarks fail to
-discriminate between methods, we will say so and explain why, rather than
-selecting the comparisons that flatter the proposal. Second, a
-methodological argument we hope outlives the specific method: that drift
-benchmarks should measure harm rather than assume it, and that new
-monitors should be evaluated on their false-alarm discipline, not only
-their detection power.
+The deliverables are the formal characterization (RQ1); a tested,
+documented monitoring library usable against any PyTorch classifier that
+exposes its penultimate features (RQ2); the benchmark study, with every
+figure and table regenerable from committed scripts and logs (RQ3); and
+the full manuscript. One softer outcome matters to us as much: honesty
+about negative space. Wherever the benchmarks fail to discriminate
+between methods we will say so and explain why, and we hope two
+evaluation habits --- measure harm instead of assuming it, and grade
+false-alarm discipline alongside detection power --- outlive the specific
+method.
 
 \section{Future Directions}
 \label{sec:future}
 
-Beyond the semester, two directions look promising. First, benchmarks.
-Current corruption suites mostly produce shifts that every family of
-monitor can see, which limits how sharply they can rank methods;
-constructing benchmarks for the \emph{silent} regime --- realistic drift
-that leaves model outputs untouched, in the spirit of the naturally
-occurring shifts cataloged by WILDS \cite{koh2021wilds} rather than
-synthetic corruptions --- would give the community a sharper instrument.
-Second, scope. The geometric viewpoint should extend beyond the classifier
-head toward deeper layers (where Kronecker-factored approximations
-\cite{martens2015kfac} make the relevant objects tractable) and toward
-other architectures, including the representational-drift questions now
-being asked of large language models \cite{pandey2025zdp}. Both
-directions are outside the current project's scope, and we flag them as
-its natural continuations.
+Beyond the semester, two directions look promising. First, benchmarks:
+corruption suites mostly produce shifts every monitor family can see;
+building benchmarks for the \emph{silent} regime --- realistic drift that
+leaves model outputs untouched, in the spirit of the naturally occurring
+shifts cataloged by WILDS \cite{koh2021wilds} --- would give the
+community a sharper instrument. Second, scope: the geometric viewpoint
+should extend beyond the classifier head toward deeper layers, where
+Kronecker-factored approximations \cite{martens2015kfac} make the
+relevant objects tractable, and toward the representational-drift
+questions now being asked of large language models \cite{pandey2025zdp}.
+Both are outside the current project; we flag them as its natural
+continuations.
 
 \section{Conclusion}
 \label{sec:conclusion}
