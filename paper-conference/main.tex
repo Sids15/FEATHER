@@ -388,16 +388,15 @@ model by the Fisher-information analysis at the heart of the project. In
 two dimensions the split looks like a curiosity. Whether it matters in
 practice comes down to two questions: how large the invisible region is
 for real architectures, and whether damaging drift actually lands in it.
-The first has an exact answer --- and, we think, a surprising one ---
-which RQ1 formalizes and the full manuscript proves; the second is what
-the benchmark evaluation measures. We keep both answers out of this
-introductory paper on purpose: the figure shows \emph{what} we exploit,
-not \emph{how} we compute it for a real network, efficiently and exactly,
-which is the technical core we defer.
+The first has an exact and, we think, surprising answer, which RQ1
+formalizes and the full manuscript proves; the second is what the
+benchmark evaluation measures. We keep both out of this paper on
+purpose: the figure shows \emph{what} we exploit, not \emph{how} we
+compute it for a real network, which is the technical core we defer.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.84\textwidth]{figures/geometry_toy}
+\includegraphics[width=0.72\textwidth]{figures/geometry_toy}
 \Description{Scatter plot of a two-class dataset in two feature
 dimensions, split by a dashed vertical decision boundary. A red arrow
 points across the boundary, labeled output-visible drift where confidence
@@ -429,11 +428,6 @@ Three questions structure the work:
   and what does it add over both output-based baselines and simpler
   geometry-free ablations of itself?}
 \end{enumerate}
-
-RQ3's final clause reflects a discipline we want to hold ourselves to: a
-new method must be compared not only against prior work but against the
-simplest degradation of itself, so that the contribution of each
-ingredient is isolated rather than asserted.
 
 \subsection{Objectives and Expected Novelty}
 
@@ -478,10 +472,9 @@ Amoukou et al.\ \cite{amoukou2024sequential} --- the closest prior framing
 --- whose proxy can be fit on the same held-out set our monitor uses; and,
 as the primary comparison, a variance-weighted feature-space monitor:
 activation covariance in place of Fisher information in an otherwise
-identical pipeline at identical calibration. This last baseline is the
-discipline check of RQ3 --- it isolates whether task-aware weighting earns
-its keep over the Mahalanobis-style density geometry of prior
-feature-space methods \cite{lee2018mahalanobis}, which is the comparison
+identical pipeline at identical calibration. This last baseline isolates
+whether task-aware weighting earns its keep over the density geometry of
+prior feature-space methods \cite{lee2018mahalanobis} --- the comparison
 the proposal lives or dies on.
 
 \runinhead{Metrics.} Synthetic corruptions tend to be visible to every
@@ -528,37 +521,20 @@ probability; the engineering is standard PyTorch. On \emph{schedule}:
 the theory and the synthetic verification are already complete
 (Sect.~\ref{sec:synthetic}), the training and monitoring infrastructure
 is largely built, and the remaining critical path is benchmark execution
-and writing, both parallelizable between the two team members. Table~\ref{tab:risks} lists the main risks
-and the mitigations we planned for each.
+and writing, both parallelizable between the two team members.
 
-\begin{table}[!t]
-\caption{Risk assessment and mitigations}
-\label{tab:risks}
-\begin{tabular}{p{5.0cm}p{6.2cm}}
-\hline\noalign{\smallskip}
-Risk & Mitigation \\
-\noalign{\smallskip}\svhline\noalign{\smallskip}
-Theory does not transfer from the synthetic setting to deep networks &
-Synthetic gate (Sect.~\ref{sec:synthetic}): every prediction verified
-analytically before deep models enter; transfer reported honestly either
-way \\
-\noalign{\smallskip}
-Benchmarks saturate (all detectors succeed, nothing discriminates) &
-Anticipated and planned for: false-alarm discipline at matched calibration
-is the pre-declared primary metric on corruption suites, and the named
-covariance baseline isolates each ingredient even when detection
-saturates; a natural-shift WILDS task is scoped as a stretch goal \\
-\noalign{\smallskip}
-Compute or storage shortfall on the shared workstation &
-Small models by design; checkpoint-resume everywhere, so interrupted runs
-lose minutes, not days \\
-\noalign{\smallskip}
-Timeline pressure in the writing stage &
-Figures and tables are script-generated from logs, so results flow into
-the manuscript without manual rework \\
-\noalign{\smallskip}\hline\noalign{\smallskip}
-\end{tabular}
-\end{table}
+Four risks dominate, each with a planned mitigation. If the theory fails
+to transfer from the synthetic setting to deep networks, the synthetic
+gate of Sect.~\ref{sec:synthetic} catches it early --- every prediction
+is verified analytically before deep models enter --- and we will report
+the transfer honestly either way. If the benchmarks saturate and every
+detector succeeds, the pre-declared primary metric (false-alarm
+discipline at matched calibration) and the covariance baseline still
+discriminate, and the WILDS stretch task adds a non-synthetic setting.
+Compute shortfalls are contained by small models and checkpoint-resume
+everywhere, so an interrupted run loses minutes, not days. And because
+figures and tables are script-generated from logs, late results flow into
+the manuscript without manual rework.
 
 \section{Preliminary Results: Synthetic Validation}
 \label{sec:synthetic}
@@ -585,7 +561,8 @@ alongside the code and re-runs in seconds on a laptop CPU, so every
 number in this paragraph can be checked on demand.
 
 \begin{figure}[t]
-\includegraphics[width=\textwidth]{figures/synthetic_demo}
+\centering
+\includegraphics[width=0.94\textwidth]{figures/synthetic_demo}
 \Description{Four panels over a stream of thirty batches with drift onset
 at batch fifteen. Under output-invisible drift, mean softmax confidence
 stays flat while the FEATHER monitor score jumps above its calibrated
@@ -602,11 +579,9 @@ and leaves it to the output-based tools that can see it}
 \section{Discussion}
 \label{sec:outcomes}
 
-The expected deliverables are the formal characterization (RQ1); a tested,
-documented monitoring library usable against any PyTorch classifier that
-exposes its penultimate features (RQ2); the benchmark study, with every
-figure and table regenerable from committed scripts and logs (RQ3); and
-the full manuscript. One softer outcome matters to us as much: honesty
+Beyond the concrete deliverables of Sect.~\ref{sec:project} --- the
+characterization, the monitoring library, the benchmark study, and the
+full manuscript --- one softer outcome matters to us as much: honesty
 about negative space. Wherever the benchmarks fail to discriminate
 between methods we will say so and explain why, and we hope two
 evaluation habits --- measure harm instead of assuming it, and grade
