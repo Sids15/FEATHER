@@ -28,8 +28,8 @@
 \titlerunning{Toward Label-Free Detection of Harmful Drift}
 \author{\todo{Name of First Author} and \todo{Name of Second Author}}
 \authorrunning{\todo{F. Author and S. Author}}
-\institute{\todo{Name of First Author} \at \todo{Name, Address of Institute}, \email{\todo{name@email.address}}
-\and \todo{Name of Second Author} \at \todo{Name, Address of Institute}, \email{\todo{name@email.address}}}
+\institute{\todo{Name of First Author} \at \todo{Department, College/University, City, Country --- no post/position per guidelines}, \email{\todo{name@email.address}}
+\and \todo{Name of Second Author} \at \todo{Department, College/University, City, Country}, \email{\todo{name@email.address}}}
 
 \maketitle
 
@@ -116,10 +116,11 @@ ground the project stands on --- what concept drift is and why the
 harmful/benign distinction is the operationally important one
 (Sect.~\ref{sec:background}); the gap between the existing families of
 monitors (Sect.~\ref{sec:survey}); the problem and the requirements a
-satisfying solution must meet (Sect.~\ref{sec:problem}); the FEATHER
-proposal, with a first look at the idea and the synthetic-testbed
-evidence (Sect.~\ref{sec:project}); and the evaluation plan, feasibility,
-and outlook (Sects.~\ref{sec:plan}--\ref{sec:future}).
+satisfying solution must meet (Sect.~\ref{sec:problem}); the proposed
+methodology, from guiding hypothesis to evaluation plan and feasibility
+(Sect.~\ref{sec:project}); preliminary results on a synthetic testbed
+(Sect.~\ref{sec:synthetic}); and a discussion of expected outcomes and
+the directions beyond the project (Sect.~\ref{sec:outcomes}).
 
 \section{Background: What Concept Drift Is}
 \label{sec:background}
@@ -168,7 +169,7 @@ reports the incident nor protects the predictions served before the
 retrain. Monitoring and adaptation are complements, not substitutes
 \cite{lu2018learning}.
 
-\section{A Survey of Label-Free Monitoring}
+\section{Literature Review}
 \label{sec:survey}
 
 We organize existing approaches into three families by the signal they
@@ -308,7 +309,7 @@ accuracy counts as benign; a subtle one that costs a lot counts as
 harmful. This protects the evaluation from the benchmark limitation noted
 in Sect.~\ref{sec:survey}.
 
-From the survey we draw four requirements for a satisfying monitor:
+From this review we draw four requirements for a satisfying monitor:
 
 \begin{enumerate}
 \item{\textbf{Label-free online.} After the one-time offline phase, the
@@ -329,7 +330,7 @@ but inherit the reliability problems documented in
 \cite{guo2017calibration, ovadia2019trust} and the structural concern
 raised above.
 
-\section{The FEATHER Proposal}
+\section{Proposed Methodology}
 \label{sec:project}
 
 \subsection{Guiding Hypothesis}
@@ -410,45 +411,6 @@ watch}
 \label{fig:geometry-toy}
 \end{figure}
 
-\subsection{Synthetic Validation}
-\label{sec:synthetic}
-
-Before any deep network, we gave the hypothesis a testbed where every
-quantity has a known closed-form answer: streams of two-dimensional
-two-Gaussian data against a frozen classifier whose ideal boundary is
-available analytically. On this testbed the direction our analysis
-predicts to be output-invisible matches the analytical one to numerical
-precision (agreement better than $1 - 10^{-6}$ in absolute cosine), and
-the two experiments of Fig.~\ref{fig:synthetic-demo} probe the two arrows
-of Fig.~\ref{fig:geometry-toy} directly. A drift of four standard
-deviations along the predicted invisible direction changes the model's
-outputs by less than $10^{-10}$ per sample --- the invisibility is real,
-not approximate --- while the calibrated monitor raises an alarm on all
-fifteen post-onset batches. An equally large drift along the visible
-direction leaves the monitor at its noise floor, exactly as intended:
-that drift is the kind output-based monitors already catch, and a
-specialist should not duplicate their alarms. Over two hundred clean
-batches the stationary false-alarm rate stays within its calibrated
-budget. The verification suite behind these claims --- 38 tests covering
-the theory's predictions and the monitor's behavior --- is committed
-alongside the code and re-runs in seconds on a laptop CPU, so every
-number in this paragraph can be checked on demand.
-
-\begin{figure}[t]
-\includegraphics[width=\textwidth]{figures/synthetic_demo}
-\Description{Four panels over a stream of thirty batches with drift onset
-at batch fifteen. Under output-invisible drift, mean softmax confidence
-stays flat while the FEATHER monitor score jumps above its calibrated
-threshold and raises alarms on every post-onset batch. Under
-output-visible drift, confidence moves while the monitor score stays at
-its noise floor with no alarms.}
-\caption{The synthetic testbed in action. Left: drift the outputs cannot
-express --- confidence stays flat, the monitor catches every post-onset
-batch. Right: drift the outputs do express --- the monitor stays quiet
-and leaves it to the output-based tools that can see it}
-\label{fig:synthetic-demo}
-\end{figure}
-
 \subsection{Research Questions}
 
 Three questions structure the work:
@@ -485,9 +447,6 @@ harmful-shift problem without the geometry \cite{amoukou2024sequential} or
 geometric machinery without the harmful/benign question
 \cite{zhang2023score, pandey2025zdp}; FEATHER is built in the
 intersection.
-
-\section{Planned Evaluation and Feasibility}
-\label{sec:plan}
 
 \subsection{Evaluation Protocol}
 \label{sec:protocol}
@@ -546,6 +505,16 @@ workstation with a single 24 GB GPU; nothing requires cluster-scale
 compute. The repository is version-controlled together with the training
 logs, and every figure and table is regenerated by committed scripts.
 
+In line with the conference guidelines on research tools, we disclose
+that an LLM-based coding assistant (Claude, Anthropic) was used during
+development to help scaffold code and edit prose. The hypothesis, the
+theory, the experimental design, and the interpretation of results are
+the authors' own; every number and figure in this paper is produced by
+committed scripts that the authors reviewed and verified, and the
+verification suite of Sect.~\ref{sec:synthetic} tests the implementation
+against analytically known ground truth rather than against the
+assistant's output.
+
 \subsection{Feasibility and Constraints}
 
 The project is deliberately scoped to be achievable within one semester by
@@ -591,10 +560,49 @@ the manuscript without manual rework \\
 \end{tabular}
 \end{table}
 
-\section{Expected Outcomes}
+\section{Preliminary Results: Synthetic Validation}
+\label{sec:synthetic}
+
+Before any deep network, we gave the hypothesis a testbed where every
+quantity has a known closed-form answer: streams of two-dimensional
+two-Gaussian data against a frozen classifier whose ideal boundary is
+available analytically. On this testbed the direction our analysis
+predicts to be output-invisible matches the analytical one to numerical
+precision (agreement better than $1 - 10^{-6}$ in absolute cosine), and
+the two experiments of Fig.~\ref{fig:synthetic-demo} probe the two arrows
+of Fig.~\ref{fig:geometry-toy} directly. A drift of four standard
+deviations along the predicted invisible direction changes the model's
+outputs by less than $10^{-10}$ per sample --- the invisibility is real,
+not approximate --- while the calibrated monitor raises an alarm on all
+fifteen post-onset batches. An equally large drift along the visible
+direction leaves the monitor at its noise floor, exactly as intended:
+that drift is the kind output-based monitors already catch, and a
+specialist should not duplicate their alarms. Over two hundred clean
+batches the stationary false-alarm rate stays within its calibrated
+budget. The verification suite behind these claims --- 38 tests covering
+the theory's predictions and the monitor's behavior --- is committed
+alongside the code and re-runs in seconds on a laptop CPU, so every
+number in this paragraph can be checked on demand.
+
+\begin{figure}[t]
+\includegraphics[width=\textwidth]{figures/synthetic_demo}
+\Description{Four panels over a stream of thirty batches with drift onset
+at batch fifteen. Under output-invisible drift, mean softmax confidence
+stays flat while the FEATHER monitor score jumps above its calibrated
+threshold and raises alarms on every post-onset batch. Under
+output-visible drift, confidence moves while the monitor score stays at
+its noise floor with no alarms.}
+\caption{The synthetic testbed in action. Left: drift the outputs cannot
+express --- confidence stays flat, the monitor catches every post-onset
+batch. Right: drift the outputs do express --- the monitor stays quiet
+and leaves it to the output-based tools that can see it}
+\label{fig:synthetic-demo}
+\end{figure}
+
+\section{Discussion}
 \label{sec:outcomes}
 
-The deliverables are the formal characterization (RQ1); a tested,
+The expected deliverables are the formal characterization (RQ1); a tested,
 documented monitoring library usable against any PyTorch classifier that
 exposes its penultimate features (RQ2); the benchmark study, with every
 figure and table regenerable from committed scripts and logs (RQ3); and
@@ -604,9 +612,6 @@ between methods we will say so and explain why, and we hope two
 evaluation habits --- measure harm instead of assuming it, and grade
 false-alarm discipline alongside detection power --- outlive the specific
 method.
-
-\section{Future Directions}
-\label{sec:future}
 
 Beyond the semester, two directions look promising. First, benchmarks:
 corruption suites mostly produce shifts every monitor family can see;
