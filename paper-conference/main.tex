@@ -125,8 +125,6 @@ the directions beyond the project (Sect.~\ref{sec:outcomes}).
 \section{Background: What Concept Drift Is}
 \label{sec:background}
 
-\subsection{Kinds of Shift and Their Timing}
-
 Let $X$ denote the model's input and $Y$ the target. A supervised model is
 trained on samples from a joint distribution $P(X, Y)$, and \emph{dataset
 shift} is any change in that joint distribution between training and
@@ -144,8 +142,6 @@ gradual, incremental, or recurring \cite{gama2014survey, lu2018learning},
 and a detector tuned for abrupt change points can be blind to a slow
 slide.
 
-\subsection{Harmful Versus Benign: The Distinction That Matters}
-
 The taxonomies above classify the \emph{data}. The operator cares about a
 classification of \emph{consequences}: did the shift degrade the model?
 The two do not line up. A large, easily detectable covariate shift may be
@@ -162,12 +158,10 @@ the damage it causes \cite{rabanser2019failing}, so a monitor that
 reports ``change detected'' without qualifying consequences delegates the
 hard part back to the human reading the alert.
 
-Continuous retraining does not remove the need for monitoring: it needs
-the labels the stream lacks, retraining on model-predicted labels
-amplifies the model's own errors, and blind periodic retraining neither
-reports the incident nor protects the predictions served before the
-retrain. Monitoring and adaptation are complements, not substitutes
-\cite{lu2018learning}.
+Nor does continuous retraining remove the need for monitoring: it needs
+the labels the stream lacks, and it neither reports the incident nor
+protects the predictions served before the retrain; monitoring and
+adaptation are complements, not substitutes \cite{lu2018learning}.
 
 \section{Literature Review}
 \label{sec:survey}
@@ -273,9 +267,9 @@ loses accuracy, which is why we insist on measuring harmfulness rather
 than assuming it.
 
 \begin{table}[!t]
-\caption{The three families of deployed-model monitors and the gap this
-project targets. Each family either consumes unavailable labels, ignores
-consequences, or trusts a witness that degrades under shift}
+\caption{The three families of deployed-model monitors: each consumes
+unavailable labels, ignores consequences, or trusts a witness that
+degrades under shift}
 \label{tab:families}
 \begin{tabular}{p{2.9cm}p{3.4cm}p{1.5cm}p{3.4cm}}
 \hline\noalign{\smallskip}
@@ -379,9 +373,9 @@ Drift along the red arrow pushes the classes across the boundary:
 predictions, confidence, and entropy all react, and every output-based
 monitor of Sect.~\ref{sec:survey} has something to work with. Drift along
 the violet arrow moves the data just as far --- but parallel to the
-boundary. Not one prediction changes. Confidence and entropy read exactly
-as before. To every output statistic the world looks healthy, however far
-the data travels in that direction.
+boundary. Not one prediction changes; confidence and entropy read exactly
+as before; to every output statistic the world looks healthy, however far
+the data travels.
 
 The two arrows are not drawn by hand; they are computed from the frozen
 model by the Fisher-information analysis at the heart of the project. In
@@ -429,16 +423,13 @@ Three questions structure the work:
   geometry-free ablations of itself?}
 \end{enumerate}
 
-\subsection{Objectives and Expected Novelty}
-
-Concretely, the project will deliver: a formal answer to RQ1 for softmax
-classifiers; a monitor implementing RQ2, with an offline fitting phase on
-the held-out set and an online phase whose per-batch cost is a small
-linear-algebra operation; a calibration procedure making the false-alarm
-budget an explicit operator-chosen parameter; and the RQ3 evaluation. The
-expected novelty is the connection itself: prior work has the
-harmful-shift problem without the geometry \cite{amoukou2024sequential} or
-geometric machinery without the harmful/benign question
+Concretely, the project will deliver a formal answer to RQ1 for softmax
+classifiers; a monitor implementing RQ2 whose per-batch cost is a small
+linear-algebra operation; a calibration procedure that makes the
+false-alarm budget an operator-chosen parameter; and the RQ3 evaluation.
+The expected novelty is the connection itself: prior work has the
+harmful-shift problem without the geometry \cite{amoukou2024sequential}
+or the geometric machinery without the harmful/benign question
 \cite{zhang2023score, pandey2025zdp}; FEATHER is built in the
 intersection.
 
@@ -481,11 +472,10 @@ the proposal lives or dies on.
 detector family at once, so threshold-free separation of harmful from
 benign episodes (AUROC) may saturate and rank nothing; we report it for
 completeness but treat \emph{false-alarm behavior on measured-benign
-episodes at matched calibration} --- which the literature underweights
-relative to detection power, and which does discriminate between monitors
-even when detection saturates --- as the primary metric on these
-benchmarks. Alongside both: wall-clock cost of the offline phase and the
-per-batch online step, reported relative to the cost of inference
+episodes at matched calibration} --- underweighted in the literature, and
+still discriminating when detection saturates --- as the primary metric
+on these benchmarks. Alongside both: wall-clock cost of the offline fit
+and the per-batch online step, relative to the cost of inference
 itself.
 
 \subsection{Tools and Technology}
@@ -499,14 +489,12 @@ compute. The repository is version-controlled together with the training
 logs, and every figure and table is regenerated by committed scripts.
 
 In line with the conference guidelines on research tools, we disclose
-that an LLM-based coding assistant (Claude, Anthropic) was used during
-development to help scaffold code and edit prose. The hypothesis, the
-theory, the experimental design, and the interpretation of results are
-the authors' own; every number and figure in this paper is produced by
-committed scripts that the authors reviewed and verified, and the
-verification suite of Sect.~\ref{sec:synthetic} tests the implementation
-against analytically known ground truth rather than against the
-assistant's output.
+that an LLM-based coding assistant (Claude, Anthropic) was used to help
+scaffold code and edit prose. The hypothesis, theory, experimental
+design, and interpretation are the authors' own; every number and figure
+is produced by committed scripts the authors verified, and the suite of
+Sect.~\ref{sec:synthetic} tests the implementation against analytic
+ground truth, not against the assistant's output.
 
 \subsection{Feasibility and Constraints}
 
@@ -552,8 +540,8 @@ outputs by less than $10^{-10}$ per sample --- the invisibility is real,
 not approximate --- while the calibrated monitor raises an alarm on all
 fifteen post-onset batches. An equally large drift along the visible
 direction leaves the monitor at its noise floor, exactly as intended:
-that drift is the kind output-based monitors already catch, and a
-specialist should not duplicate their alarms. Over two hundred clean
+that drift is the kind output-based monitors already catch. Over two
+hundred clean
 batches the stationary false-alarm rate stays within its calibrated
 budget. The verification suite behind these claims --- 38 tests covering
 the theory's predictions and the monitor's behavior --- is committed
