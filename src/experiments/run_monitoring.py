@@ -14,10 +14,15 @@ Typical use on the workstation (after training, see docs/training.md):
     python src/experiments/run_monitoring.py --model outputs/cifar10_seed0/final_model.pt \
         --mode cifar10c --out-name monitor_cifar10_seed0
 
+By default the clean reference data is split 50/50 into a geometry split
+(Fisher/PCA fit) and a held-out calibration split (reference mean, bootstrap
+thresholds) — the corrected protocol of paper Sect. 6.7. Pass
+--calibration-mode same_split only to reproduce the legacy (leaky) numbers.
+
 Outputs: outputs/<out-name>/episodes.csv (one row per stream batch),
-fit.json (subspace dimensions, thresholds, timing), plus a full log in
-logs/<out-name>.log. Analysis/plots run later from episodes.csv (no GPU
-needed), so only this script and training need the workstation.
+fit.json (subspace dimensions, thresholds, calibration mode, timing), plus a
+full log in logs/<out-name>.log. Analysis/plots run later from episodes.csv
+(no GPU needed), so only this script and training need the workstation.
 """
 
 from __future__ import annotations
@@ -39,7 +44,12 @@ from feather.data.vision import (
     mnist_datasets,
     rotated_mnist_test,
 )
-from feather.monitoring import fit_monitors, load_frozen_model, run_episode
+from feather.monitoring import (
+    fit_monitors,
+    load_frozen_model,
+    run_episode,
+    split_reference_dataset,
+)
 
 logger = logging.getLogger("feather.experiments.monitoring")
 
@@ -55,6 +65,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--quantile", type=float, default=0.99)
     parser.add_argument("--n-bootstrap", type=int, default=500)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--calibration-mode", default="heldout",
+                        choices=["heldout", "same_split"],
+                        help="heldout (default): calibrate thresholds on a "
+                        "reference split disjoint from the Fisher fit; "
+                        "same_split: legacy leaky protocol, reproduction only")
+    parser.add_argument("--calibration-fraction", type=float, default=0.5,
+                        help="heldout only: share of reference data used for "
+                        "threshold calibration")
+    parser.add_argument("--split-seed", type=int, default=0,
+                        help="heldout only: seed for the geometry/calibration split")
     parser.add_argument("--corruptions", nargs="*", default=None,
                         help="cifar10c only: subset of corruptions (default all 19)")
     parser.add_argument("--data-root", default=None, help="overrides FEATHER_DATA_DIR")
@@ -111,9 +131,21 @@ def main() -> None:
     else:
         reference, _ = cifar10_datasets(args.data_root, augment=False)
 
+    if args.calibration_mode == "heldout":
+        geometry, calibration = split_reference_dataset(
+            reference, args.calibration_fraction, args.split_seed
+        )
+        logger.info(
+            "held-out calibration: geometry n=%d, calibration n=%d (split seed %d)",
+            len(geometry), len(calibration), args.split_seed,
+        )
+    else:
+        geometry = calibration = reference
+        logger.warning("legacy same_split calibration: thresholds will be optimistic")
+
     fit_start = time.perf_counter()
     bundle = fit_monitors(
-        model, reference, device,
+        model, geometry, calibration, device,
         batch_size=args.batch_size, quantile=args.quantile,
         n_bootstrap=args.n_bootstrap, seed=args.seed,
     )
@@ -150,6 +182,11 @@ def main() -> None:
         "quantile": args.quantile,
         "n_bootstrap": args.n_bootstrap,
         "seed": args.seed,
+        "calibration_mode": args.calibration_mode,
+        "calibration_fraction": args.calibration_fraction,
+        "split_seed": args.split_seed,
+        "geometry_n": bundle.geometry_n,
+        "calibration_n": bundle.calibration_n,
         "blind_dim": bundle.blind_dim,
         "fisher_top_eigenvalues": [float(v) for v in bundle.fisher_eigenvalues[:12]],
         "feather_shift_threshold": bundle.feather.shift_threshold,

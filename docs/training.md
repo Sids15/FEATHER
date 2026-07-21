@@ -122,6 +122,22 @@ baselines (mean confidence, entropy), and the FEATHER + PCA-ablation monitor
 statistics — plus `fit.json` (subspace dims, thresholds, offline/online
 timing for the paper's feasibility table) and a full log.
 
+By default the clean reference data is split 50/50: geometry (Fisher/PCA
+fit) and a held-out calibration split (μ_ref + bootstrap thresholds) — the
+corrected protocol from the paper's calibration finding (Sect. 6.7). Confirm
+`"calibration_mode": "heldout"` in `fit.json`. `--calibration-mode
+same_split` reproduces the legacy (leaky) numbers only.
+
+**Held-out calibration rerun (all 10 runs, then run `pytest` too):**
+
+```powershell
+foreach ($s in 0..4) {
+  python src\experiments\run_monitoring.py --model outputs\mnist_seed$s\final_model.pt --mode rotated_mnist --out-name monitor_mnist_seed$s
+  python src\experiments\run_monitoring.py --model outputs\cifar10_seed$s\final_model.pt --mode cifar10c --out-name monitor_cifar10_seed$s
+}
+python src\experiments\analyze_monitoring.py
+```
+
 ## 8. What to bring back from the workstation
 
 Copy the whole `outputs/` and `logs/` folders back (small: a few hundred MB).

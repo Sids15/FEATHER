@@ -9,6 +9,16 @@ activation-space Fisher, and calibrate two monitors on clean reference data:
   activation covariance (lowest-variance subspace of the same dimension) —
   the paper's Fisher-vs-PCA control.
 
+The reference data plays two distinct roles, served by two *disjoint* splits
+(see :func:`split_reference_dataset`):
+
+- **geometry**: fits the Fisher/PCA bases;
+- **calibration**: supplies μ_ref and the bootstrap thresholds.
+
+Calibrating on the geometry split leaks the fit into the thresholds and makes
+them too optimistic (paper Sect. 6.7); passing the same dataset for both is
+kept only to reproduce the legacy protocol.
+
 Online: per streaming batch, record true accuracy (labels used for
 *evaluation only*), the output-based baseline signals (mean confidence, mean
 entropy), and both monitors' statistics.
@@ -23,7 +33,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 
 from feather.core.fisher import activation_fisher, fisher_subspaces
 from feather.core.monitor import MonitorConfig, MonitorResult, SubspaceDriftMonitor
@@ -68,6 +78,42 @@ def extract_activations(
     return np.vstack(features), np.vstack(logits), np.concatenate(labels)
 
 
+def split_reference_dataset(
+    dataset: Dataset,
+    calibration_fraction: float = 0.5,
+    seed: int = 0,
+) -> tuple[Subset, Subset]:
+    """Split reference data into disjoint (geometry, calibration) subsets.
+
+    Deterministic given ``seed``: a fixed permutation of the indices, with the
+    last ``calibration_fraction`` share going to calibration.
+
+    Args:
+        dataset: Clean reference dataset (indexable, with ``len``).
+        calibration_fraction: Share of samples reserved for threshold
+            calibration, in (0, 1).
+        seed: Seed for the index permutation.
+
+    Returns:
+        (geometry, calibration) subsets; both non-empty.
+    """
+    if not 0.0 < calibration_fraction < 1.0:
+        raise ValueError(
+            f"calibration_fraction must be in (0, 1), got {calibration_fraction}"
+        )
+    n = len(dataset)
+    n_calibration = int(round(n * calibration_fraction))
+    if n_calibration == 0 or n_calibration == n:
+        raise ValueError(
+            f"split of {n} samples at fraction {calibration_fraction} leaves "
+            "an empty subset"
+        )
+    permutation = np.random.default_rng(seed).permutation(n)
+    geometry_idx = permutation[: n - n_calibration].tolist()
+    calibration_idx = permutation[n - n_calibration :].tolist()
+    return Subset(dataset, geometry_idx), Subset(dataset, calibration_idx)
+
+
 def head_params(model: nn.Module) -> tuple[np.ndarray, np.ndarray]:
     """Return the softmax head's (W, b) as NumPy arrays."""
     head = model.head
@@ -88,11 +134,14 @@ class MonitorBundle:
     pca: SubspaceDriftMonitor
     blind_dim: int
     fisher_eigenvalues: np.ndarray
+    geometry_n: int
+    calibration_n: int
 
 
 def fit_monitors(
     model: nn.Module,
-    reference: Dataset,
+    geometry_reference: Dataset,
+    calibration_reference: Dataset,
     device: torch.device,
     batch_size: int = 500,
     quantile: float = 0.99,
@@ -101,11 +150,16 @@ def fit_monitors(
 ) -> MonitorBundle:
     """Fit the FEATHER monitor and its PCA-ablation twin on clean reference data.
 
+    The Fisher/PCA bases come from ``geometry_reference``; μ_ref and the
+    bootstrap thresholds come from ``calibration_reference``. The two must be
+    disjoint for honest thresholds (use :func:`split_reference_dataset`);
+    passing the same dataset twice reproduces the legacy same-split protocol.
+
     The PCA monitor uses the lowest-variance subspace of the activation
     covariance with the *same dimension* as FEATHER's blind subspace, so the
     two differ only in the matrix that defines the geometry.
     """
-    phi, _, labels = extract_activations(model, reference, device)
+    phi, _, labels = extract_activations(model, geometry_reference, device)
     weight, bias = head_params(model)
 
     fisher = activation_fisher(phi, labels, weight, bias)
@@ -121,14 +175,31 @@ def fit_monitors(
     eigenvalues, eigenvectors = np.linalg.eigh(covariance)  # ascending
     pca_basis = eigenvectors[:, :blind_dim]  # lowest-variance directions
 
+    if calibration_reference is geometry_reference:
+        calibration_phi = phi
+        logger.warning(
+            "calibrating thresholds on the geometry split (legacy same-split "
+            "protocol); thresholds will be optimistic"
+        )
+    else:
+        calibration_phi, _, _ = extract_activations(
+            model, calibration_reference, device
+        )
+    logger.info(
+        "reference split: geometry n=%d, calibration n=%d",
+        phi.shape[0], calibration_phi.shape[0],
+    )
+
     config = MonitorConfig(
         batch_size=batch_size, n_bootstrap=n_bootstrap, quantile=quantile, seed=seed
     )
     return MonitorBundle(
-        feather=SubspaceDriftMonitor(subspaces.blind_basis, phi, config),
-        pca=SubspaceDriftMonitor(pca_basis, phi, config),
+        feather=SubspaceDriftMonitor(subspaces.blind_basis, calibration_phi, config),
+        pca=SubspaceDriftMonitor(pca_basis, calibration_phi, config),
         blind_dim=blind_dim,
         fisher_eigenvalues=subspaces.eigenvalues,
+        geometry_n=int(phi.shape[0]),
+        calibration_n=int(calibration_phi.shape[0]),
     )
 
 

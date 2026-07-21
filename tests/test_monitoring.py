@@ -13,6 +13,7 @@ from feather.monitoring import (
     head_params,
     load_frozen_model,
     run_episode,
+    split_reference_dataset,
 )
 
 DEVICE = torch.device("cpu")
@@ -59,13 +60,43 @@ class TestBridge:
             load_frozen_model(path, DEVICE)
 
 
+class TestSplitReferenceDataset:
+    def test_sizes_and_disjoint(self):
+        geometry, calibration = split_reference_dataset(fake_mnist(200), 0.5, seed=0)
+        assert len(geometry) == 100 and len(calibration) == 100
+        assert set(geometry.indices).isdisjoint(calibration.indices)
+        assert sorted(geometry.indices + calibration.indices) == list(range(200))
+
+    def test_deterministic_given_seed(self):
+        dataset = fake_mnist(200)
+        first = split_reference_dataset(dataset, 0.5, seed=3)
+        second = split_reference_dataset(dataset, 0.5, seed=3)
+        assert first[0].indices == second[0].indices
+        assert first[1].indices == second[1].indices
+
+    def test_different_seeds_differ(self):
+        dataset = fake_mnist(200)
+        assert (
+            split_reference_dataset(dataset, 0.5, seed=0)[0].indices
+            != split_reference_dataset(dataset, 0.5, seed=1)[0].indices
+        )
+
+    def test_rejects_degenerate_fraction(self):
+        with pytest.raises(ValueError, match="fraction"):
+            split_reference_dataset(fake_mnist(10), 1.5)
+        with pytest.raises(ValueError, match="empty"):
+            split_reference_dataset(fake_mnist(10), 0.001)
+
+
 class TestMonitoringPipeline:
     def test_fit_and_episode_records(self, model):
+        geometry, calibration = split_reference_dataset(fake_mnist(), 0.5, seed=0)
         bundle = fit_monitors(
-            model, fake_mnist(), DEVICE, batch_size=64, n_bootstrap=50
+            model, geometry, calibration, DEVICE, batch_size=64, n_bootstrap=50
         )
         assert 0 < bundle.blind_dim < 128  # rank <= C-1 = 9 sensitive dims
         assert bundle.blind_dim >= 128 - 9
+        assert bundle.geometry_n == 128 and bundle.calibration_n == 128
 
         records = run_episode(
             model, bundle, fake_mnist(seed=1), DEVICE, episode="e0", batch_size=64
@@ -79,3 +110,27 @@ class TestMonitoringPipeline:
         ):
             assert column in first
         assert 0.0 <= first["accuracy"] <= 1.0
+
+    def test_geometry_fixed_thresholds_follow_calibration(self, model):
+        """Basis comes from the geometry split, thresholds from calibration."""
+        geometry = fake_mnist(seed=0)
+        bundle_a = fit_monitors(
+            model, geometry, fake_mnist(seed=1), DEVICE, batch_size=64, n_bootstrap=50
+        )
+        bundle_b = fit_monitors(
+            model, geometry, fake_mnist(seed=2), DEVICE, batch_size=64, n_bootstrap=50
+        )
+        assert (bundle_a.fisher_eigenvalues == bundle_b.fisher_eigenvalues).all()
+        assert (bundle_a.feather._basis == bundle_b.feather._basis).all()
+        assert bundle_a.feather.shift_threshold != bundle_b.feather.shift_threshold
+        assert (bundle_a.feather._mu_ref != bundle_b.feather._mu_ref).any()
+
+    def test_heldout_differs_from_same_split(self, model):
+        geometry = fake_mnist(seed=0)
+        same_split = fit_monitors(
+            model, geometry, geometry, DEVICE, batch_size=64, n_bootstrap=50
+        )
+        heldout = fit_monitors(
+            model, geometry, fake_mnist(seed=1), DEVICE, batch_size=64, n_bootstrap=50
+        )
+        assert same_split.feather.shift_threshold != heldout.feather.shift_threshold

@@ -106,6 +106,62 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
     return fit["mode"], fit["seed"], rows
 
 
+def per_seed_alarm_rates(
+    rows: list[dict], monitor: str, clean_name: str
+) -> dict[str, dict]:
+    """Batch alarm rates per seed and category, with mean ± std across seeds.
+
+    Categories: the clean episode itself, plus benign / gray / harmful drift
+    episodes (clean excluded from benign so the calibration check is visible).
+    """
+    by_seed: dict[int, list[dict]] = defaultdict(list)
+    for row in rows:
+        by_seed[row["seed"]].append(row)
+
+    summary: dict[str, dict] = {}
+    for category in ("clean", "benign", "gray", "harmful"):
+        per_seed = {}
+        for seed, seed_rows in sorted(by_seed.items()):
+            if category == "clean":
+                selected = [r for r in seed_rows if r["episode"] == clean_name]
+            else:
+                selected = [
+                    r for r in seed_rows
+                    if r["label"] == category and r["episode"] != clean_name
+                ]
+            if selected:
+                rate = float(np.mean([r[f"{monitor}_alarm_rate"] for r in selected]))
+                per_seed[str(seed)] = round(rate, 4)
+        values = list(per_seed.values())
+        summary[category] = {
+            "mean": round(float(np.mean(values)), 4) if values else None,
+            "std": round(float(np.std(values)), 4) if values else None,
+            "per_seed": per_seed,
+        }
+    return summary
+
+
+def paired_sign_flip_test(differences: list[float]) -> dict:
+    """Exact two-sided sign-flip permutation test on per-seed differences.
+
+    Enumerates all 2^n sign assignments (n = #seeds, so 32 for 5 seeds) and
+    reports the fraction whose |mean| is at least the observed |mean|.
+    """
+    diffs = np.array(differences, dtype=float)
+    n = len(diffs)
+    observed = abs(diffs.mean())
+    signs = np.array(
+        [[1 if (mask >> i) & 1 else -1 for i in range(n)] for mask in range(2**n)]
+    )
+    flipped_means = np.abs((signs * diffs).mean(axis=1))
+    return {
+        "mean_difference": round(float(diffs.mean()), 4),
+        "std_difference": round(float(diffs.std()), 4),
+        "per_seed_differences": [round(float(d), 4) for d in diffs],
+        "p_value": round(float(np.mean(flipped_means >= observed - 1e-12)), 4),
+    }
+
+
 def per_seed_aurocs(rows: list[dict], detector: str) -> list[float]:
     by_seed = defaultdict(list)
     for row in rows:
@@ -199,13 +255,26 @@ def main() -> None:
     args = parser.parse_args()
 
     all_rows: list[dict] = []
+    calibration_modes: set[str] = set()
     for fit_path in sorted((args.runs_root / "outputs").glob("monitor_*/fit.json")):
+        fit = json.loads(fit_path.read_text())
+        # runs predating the held-out protocol carry no calibration_mode key
+        calibration_modes.add(fit.get("calibration_mode", "same_split"))
         mode, seed, rows = load_episode_table(fit_path.parent)
         all_rows.extend(rows)
         logger.info("loaded %s (%s, seed %d): %d episodes", fit_path.parent.name,
                     mode, seed, len(rows))
+    if calibration_modes - {"heldout"}:
+        logger.warning(
+            "some runs use same-split calibration %s — alarm-rate tables from "
+            "these runs are legacy-only, not paper headline numbers",
+            sorted(calibration_modes),
+        )
 
-    summary: dict = {"episode_counts": {}, "auroc": {}, "alarm_rates": {}}
+    summary: dict = {
+        "episode_counts": {}, "auroc": {}, "alarm_rates": {},
+        "calibration_modes": sorted(calibration_modes),
+    }
     for mode in ("cifar10c", "rotated_mnist"):
         rows = [r for r in all_rows if r["mode"] == mode]
         if not rows:
@@ -221,15 +290,18 @@ def main() -> None:
                 "std": round(float(np.nanstd(values)), 4),
                 "per_seed": [round(v, 4) for v in values],
             }
-        if mode == "cifar10c":
-            benign = [r for r in rows if r["label"] == "benign"]
-            harmful = [r for r in rows if r["label"] == "harmful"]
-            summary["alarm_rates"][mode] = {
-                "feather_benign": round(float(np.mean([r["feather_alarm_rate"] for r in benign])), 4),
-                "feather_harmful": round(float(np.mean([r["feather_alarm_rate"] for r in harmful])), 4),
-                "pca_benign": round(float(np.mean([r["pca_alarm_rate"] for r in benign])), 4),
-                "pca_harmful": round(float(np.mean([r["pca_alarm_rate"] for r in harmful])), 4),
-            }
+        clean_name = CLEAN_EPISODE[mode]
+        feather_rates = per_seed_alarm_rates(rows, "feather", clean_name)
+        pca_rates = per_seed_alarm_rates(rows, "pca", clean_name)
+        entry = {"feather": feather_rates, "pca": pca_rates}
+        benign_diffs = [
+            pca_rates["benign"]["per_seed"][seed] - rate
+            for seed, rate in feather_rates["benign"]["per_seed"].items()
+            if seed in pca_rates["benign"]["per_seed"]
+        ]
+        if benign_diffs:
+            entry["benign_pca_minus_feather"] = paired_sign_flip_test(benign_diffs)
+        summary["alarm_rates"][mode] = entry
 
     args.tables_dir.mkdir(parents=True, exist_ok=True)
     args.figures_dir.mkdir(parents=True, exist_ok=True)
