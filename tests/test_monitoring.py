@@ -105,6 +105,8 @@ class TestMonitoringPipeline:
         first = records[0]
         for column in (
             "episode", "batch", "accuracy", "mean_confidence", "mean_entropy",
+            "atc_score", "atc_alarm", "conf_score", "conf_alarm",
+            "entropy_score", "entropy_alarm", "proxy_score", "proxy_alarm",
             "feather_shift_magnitude", "feather_alarm",
             "pca_shift_magnitude", "pca_alarm",
         ):

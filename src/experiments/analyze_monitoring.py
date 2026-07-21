@@ -11,6 +11,9 @@ Detectors compared:
 - pca       : same statistic from the covariance-ablation monitor
 - confidence: drop in mean max-softmax confidence (output-based baseline)
 - entropy   : rise in mean prediction entropy (output-based baseline)
+- atc/proxy : ATC-style accuracy estimate and Amoukou-inspired error proxy
+  (only for runs whose episodes.csv has the calibrated baseline columns;
+  their alarm rates join feather/pca in the alarm-rate summary)
 
 Outputs: paper/tables/monitoring_summary.json,
 paper/figures/results_cifar10c.png, paper/figures/results_rotated_mnist.png.
@@ -35,6 +38,7 @@ logger = logging.getLogger("feather.experiments.analysis")
 BENIGN_MAX_DROP = 0.02
 HARMFUL_MIN_DROP = 0.10
 CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00"}
+BASELINE_MONITORS = ("atc", "conf", "entropy", "proxy")
 
 # Palette (dataviz reference, light mode).
 BLUE, VIOLET, RED, MUTED, INK = "#2a78d6", "#4a3aa7", "#e34948", "#898781", "#0b0b0b"
@@ -73,6 +77,9 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
         return float(np.mean([float(r[column]) for r in rows]))
 
     clean = per_episode[clean_name]
+    # legacy episodes.csv (pre-baseline runs) lacks the {atc,conf,entropy,proxy}
+    # columns, so every baseline-derived field is guarded on presence
+    has_baselines = "atc_score" in clean[0]
     baseline = {
         "acc": mean(clean, "accuracy"),
         "conf": mean(clean, "mean_confidence"),
@@ -80,6 +87,9 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
         "feather_m": mean(clean, "feather_shift_magnitude"),
         "pca_m": mean(clean, "pca_shift_magnitude"),
     }
+    if has_baselines:
+        baseline["atc"] = mean(clean, "atc_score")
+        baseline["proxy"] = mean(clean, "proxy_score")
     rows = []
     for episode, batch_rows in per_episode.items():
         accuracy = mean(batch_rows, "accuracy")
@@ -89,7 +99,7 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
             else "harmful" if drop > HARMFUL_MIN_DROP
             else "gray"
         )
-        rows.append({
+        row = {
             "mode": fit["mode"],
             "seed": fit["seed"],
             "episode": episode,
@@ -102,7 +112,13 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
             "entropy": mean(batch_rows, "mean_entropy") - baseline["ent"],
             "feather_alarm_rate": mean(batch_rows, "feather_alarm"),
             "pca_alarm_rate": mean(batch_rows, "pca_alarm"),
-        })
+        }
+        if has_baselines:
+            row["atc"] = baseline["atc"] - mean(batch_rows, "atc_score")
+            row["proxy"] = mean(batch_rows, "proxy_score") - baseline["proxy"]
+            for name in BASELINE_MONITORS:
+                row[f"{name}_alarm_rate"] = mean(batch_rows, f"{name}_alarm")
+        rows.append(row)
     return fit["mode"], fit["seed"], rows
 
 
@@ -283,7 +299,9 @@ def main() -> None:
                   ("benign", "gray", "harmful")}
         summary["episode_counts"][mode] = counts
         summary["auroc"][mode] = {}
-        for detector in ("feather", "pca", "confidence", "entropy"):
+        detectors = ["feather", "pca", "confidence", "entropy"]
+        detectors += [d for d in ("atc", "proxy") if d in rows[0]]
+        for detector in detectors:
             values = per_seed_aurocs(rows, detector)
             summary["auroc"][mode][detector] = {
                 "mean": round(float(np.nanmean(values)), 4),
@@ -291,9 +309,10 @@ def main() -> None:
                 "per_seed": [round(v, 4) for v in values],
             }
         clean_name = CLEAN_EPISODE[mode]
-        feather_rates = per_seed_alarm_rates(rows, "feather", clean_name)
-        pca_rates = per_seed_alarm_rates(rows, "pca", clean_name)
-        entry = {"feather": feather_rates, "pca": pca_rates}
+        monitors = ["feather", "pca"]
+        monitors += [m for m in BASELINE_MONITORS if f"{m}_alarm_rate" in rows[0]]
+        entry = {m: per_seed_alarm_rates(rows, m, clean_name) for m in monitors}
+        feather_rates, pca_rates = entry["feather"], entry["pca"]
         benign_diffs = [
             pca_rates["benign"]["per_seed"][seed] - rate
             for seed, rate in feather_rates["benign"]["per_seed"].items()

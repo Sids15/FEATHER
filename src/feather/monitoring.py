@@ -35,6 +35,11 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
+from feather.baselines import (
+    ScalarBaseline,
+    fit_output_baselines,
+    score_output_baselines,
+)
 from feather.core.fisher import activation_fisher, fisher_subspaces
 from feather.core.monitor import MonitorConfig, MonitorResult, SubspaceDriftMonitor
 from feather.models import MODELS
@@ -136,6 +141,7 @@ class MonitorBundle:
     fisher_eigenvalues: np.ndarray
     geometry_n: int
     calibration_n: int
+    baselines: dict[str, ScalarBaseline]
 
 
 def fit_monitors(
@@ -176,13 +182,13 @@ def fit_monitors(
     pca_basis = eigenvectors[:, :blind_dim]  # lowest-variance directions
 
     if calibration_reference is geometry_reference:
-        calibration_phi = phi
+        calibration_phi, calibration_labels = phi, labels
         logger.warning(
             "calibrating thresholds on the geometry split (legacy same-split "
             "protocol); thresholds will be optimistic"
         )
     else:
-        calibration_phi, _, _ = extract_activations(
+        calibration_phi, _, calibration_labels = extract_activations(
             model, calibration_reference, device
         )
     logger.info(
@@ -193,6 +199,7 @@ def fit_monitors(
     config = MonitorConfig(
         batch_size=batch_size, n_bootstrap=n_bootstrap, quantile=quantile, seed=seed
     )
+    calibration_probabilities = _softmax(calibration_phi @ weight.T + bias)
     return MonitorBundle(
         feather=SubspaceDriftMonitor(subspaces.blind_basis, calibration_phi, config),
         pca=SubspaceDriftMonitor(pca_basis, calibration_phi, config),
@@ -200,6 +207,9 @@ def fit_monitors(
         fisher_eigenvalues=subspaces.eigenvalues,
         geometry_n=int(phi.shape[0]),
         calibration_n=int(calibration_phi.shape[0]),
+        baselines=fit_output_baselines(
+            calibration_probabilities, calibration_labels, config
+        ),
     )
 
 
@@ -243,6 +253,7 @@ def run_episode(
             "mean_confidence": round(float(probabilities.max(axis=1).mean()), 6),
             "mean_entropy": round(float(entropy.mean()), 6),
         }
+        record.update(score_output_baselines(bundle.baselines, probabilities))
         record.update(_result_columns("feather", bundle.feather.score(phi)))
         record.update(_result_columns("pca", bundle.pca.score(phi)))
         records.append(record)

@@ -193,6 +193,15 @@ def main() -> None:
         "feather_energy_threshold": bundle.feather.energy_threshold,
         "pca_shift_threshold": bundle.pca.shift_threshold,
         "pca_energy_threshold": bundle.pca.energy_threshold,
+        "output_baselines": {
+            name: {
+                "direction": b.direction,
+                "threshold": b.threshold,
+                "reference_mean": b.reference_mean,
+                "params": b.params,
+            }
+            for name, b in bundle.baselines.items()
+        },
         "offline_fit_seconds": round(fit_seconds, 2),
         "online_seconds_total": round(online_seconds, 2),
         "online_ms_per_batch": round(1000 * online_seconds / max(n_batches, 1), 2),
