@@ -128,6 +128,12 @@ corrected protocol from the paper's calibration finding (Sect. 6.7). Confirm
 `"calibration_mode": "heldout"` in `fit.json`. `--calibration-mode
 same_split` reproduces the legacy (leaky) numbers only.
 
+Each run also saves `outputs/<out-name>/raw/` (per-episode logits + labels
+and the calibration arrays, ~40 MB per CIFAR run): with these, output-based
+baselines can be changed/added and thresholds recalibrated **offline** on
+the laptop via `python src\experiments\refit_baselines.py` — no GPU rerun.
+Keep `raw/` in the copied-back outputs.
+
 **Held-out calibration rerun (all 10 runs, then run `pytest` too):**
 
 ```powershell

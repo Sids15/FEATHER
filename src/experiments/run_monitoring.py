@@ -20,9 +20,12 @@ thresholds) — the corrected protocol of paper Sect. 6.7. Pass
 --calibration-mode same_split only to reproduce the legacy (leaky) numbers.
 
 Outputs: outputs/<out-name>/episodes.csv (one row per stream batch),
-fit.json (subspace dimensions, thresholds, calibration mode, timing), plus a
+fit.json (subspace dimensions, thresholds, calibration mode, timing), and
+raw/ (per-episode logits + calibration arrays, ~40 MB per CIFAR run), plus a
 full log in logs/<out-name>.log. Analysis/plots run later from episodes.csv
-(no GPU needed), so only this script and training need the workstation.
+(no GPU needed), so only this script and training need the workstation; the
+raw/ arrays additionally let refit_baselines.py change or add output-based
+baselines and recalibrate thresholds offline, without another GPU pass.
 """
 
 from __future__ import annotations
@@ -34,6 +37,7 @@ import logging
 import time
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from feather.data.vision import (
@@ -46,6 +50,7 @@ from feather.data.vision import (
 )
 from feather.monitoring import (
     fit_monitors,
+    head_params,
     load_frozen_model,
     run_episode,
     split_reference_dataset,
@@ -75,6 +80,11 @@ def parse_args() -> argparse.Namespace:
                         "threshold calibration")
     parser.add_argument("--split-seed", type=int, default=0,
                         help="heldout only: seed for the geometry/calibration split")
+    parser.add_argument("--save-raw", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="save per-episode logits/labels and the calibration "
+                        "arrays under outputs/<out-name>/raw/ so baselines and "
+                        "thresholds can be refit offline without a GPU rerun")
     parser.add_argument("--corruptions", nargs="*", default=None,
                         help="cifar10c only: subset of corruptions (default all 19)")
     parser.add_argument("--data-root", default=None, help="overrides FEATHER_DATA_DIR")
@@ -152,6 +162,25 @@ def main() -> None:
     fit_seconds = time.perf_counter() - fit_start
     logger.info("offline fit done in %.1fs (blind dim=%d)", fit_seconds, bundle.blind_dim)
 
+    raw_dir = out_dir / "raw" if args.save_raw else None
+    if raw_dir is not None:
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        weight, bias = head_params(model)
+        np.savez_compressed(
+            raw_dir / "calibration.npz",
+            phi=bundle.calibration_phi.astype(np.float16),
+            logits=(bundle.calibration_phi @ weight.T + bias).astype(np.float32),
+            labels=bundle.calibration_labels.astype(np.int64),
+        )
+        np.savez_compressed(
+            raw_dir / "monitor.npz",
+            blind_basis=bundle.feather.basis.astype(np.float32),
+            pca_basis=bundle.pca.basis.astype(np.float32),
+            weight=weight.astype(np.float32),
+            bias=bias.astype(np.float32),
+        )
+        logger.info("raw calibration/monitor arrays saved under %s", raw_dir)
+
     csv_path = out_dir / "episodes.csv"
     writer = None
     online_seconds = 0.0
@@ -160,7 +189,8 @@ def main() -> None:
         for episode, dataset in episodes_for(args):
             start = time.perf_counter()
             records = run_episode(
-                model, bundle, dataset, device, episode, batch_size=args.batch_size
+                model, bundle, dataset, device, episode, batch_size=args.batch_size,
+                raw_path=None if raw_dir is None else raw_dir / f"episode_{episode}.npz",
             )
             online_seconds += time.perf_counter() - start
             n_batches += len(records)

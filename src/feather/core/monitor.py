@@ -112,6 +112,11 @@ class SubspaceDriftMonitor:
             self.energy_threshold,
         )
 
+    @property
+    def basis(self) -> np.ndarray:
+        """The monitored subspace basis (d, k) — persisted for offline recalibration."""
+        return self._basis
+
     def _statistics(self, phi: np.ndarray) -> tuple[float, float, float]:
         """Return (direction_ratio, shift_magnitude, energy) for a batch."""
         delta_mu = phi.mean(axis=0) - self._mu_ref

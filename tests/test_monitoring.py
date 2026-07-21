@@ -127,6 +127,23 @@ class TestMonitoringPipeline:
         assert bundle_a.feather.shift_threshold != bundle_b.feather.shift_threshold
         assert (bundle_a.feather._mu_ref != bundle_b.feather._mu_ref).any()
 
+    def test_run_episode_saves_raw_logits(self, model, tmp_path):
+        import numpy as np
+
+        geometry, calibration = split_reference_dataset(fake_mnist(), 0.5, seed=0)
+        bundle = fit_monitors(
+            model, geometry, calibration, DEVICE, batch_size=64, n_bootstrap=50
+        )
+        raw_path = tmp_path / "raw" / "episode_e0.npz"
+        records = run_episode(
+            model, bundle, fake_mnist(seed=1), DEVICE, episode="e0",
+            batch_size=64, raw_path=raw_path,
+        )
+        raw = np.load(raw_path)
+        assert raw["logits"].shape == (256, 10)
+        assert raw["labels"].shape == (256,)
+        assert sum(r["n"] for r in records) == 256
+
     def test_heldout_differs_from_same_split(self, model):
         geometry = fake_mnist(seed=0)
         same_split = fit_monitors(

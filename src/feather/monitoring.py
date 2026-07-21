@@ -142,6 +142,8 @@ class MonitorBundle:
     geometry_n: int
     calibration_n: int
     baselines: dict[str, ScalarBaseline]
+    calibration_phi: np.ndarray
+    calibration_labels: np.ndarray
 
 
 def fit_monitors(
@@ -210,6 +212,8 @@ def fit_monitors(
         baselines=fit_output_baselines(
             calibration_probabilities, calibration_labels, config
         ),
+        calibration_phi=calibration_phi,
+        calibration_labels=calibration_labels,
     )
 
 
@@ -232,11 +236,20 @@ def run_episode(
     device: torch.device,
     episode: str,
     batch_size: int = 500,
+    raw_path: str | Path | None = None,
 ) -> list[dict]:
-    """Stream one episode; return one record per batch (labels: eval only)."""
+    """Stream one episode; return one record per batch (labels: eval only).
+
+    When ``raw_path`` is given, the episode's per-sample logits and labels are
+    saved there as a compressed ``.npz`` (rows in stream order), so any
+    output-based baseline can later be refit or added offline —
+    ``src/experiments/refit_baselines.py`` — without redoing the GPU pass.
+    """
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     weight, bias = head_params(model)
     records = []
+    raw_logits: list[np.ndarray] = []
+    raw_labels: list[np.ndarray] = []
     for index, (inputs, targets) in enumerate(loader):
         phi = model.features(inputs.to(device)).cpu().numpy()
         logits = phi @ weight.T + bias
@@ -257,4 +270,15 @@ def run_episode(
         record.update(_result_columns("feather", bundle.feather.score(phi)))
         record.update(_result_columns("pca", bundle.pca.score(phi)))
         records.append(record)
+        if raw_path is not None:
+            raw_logits.append(logits.astype(np.float32))
+            raw_labels.append(targets_np)
+    if raw_path is not None:
+        raw_path = Path(raw_path)
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            raw_path,
+            logits=np.vstack(raw_logits),
+            labels=np.concatenate(raw_labels).astype(np.int64),
+        )
     return records
