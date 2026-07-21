@@ -36,13 +36,14 @@
 \newcommand{\F}{\mathbf{F}}
 \newcommand{\act}{\phi}
 \DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\diag}{diag}
 \DeclareMathOperator{\spn}{span}
 \DeclareMathOperator*{\softmax}{softmax}
 
 \begin{document}
 
 \title*{FEATHER: Fisher-Eigenvalue Adaptive Thresholding for Error-Robust Drift Detection}
-\titlerunning{FEATHER: Fisher Null-Space Drift Detection}
+\titlerunning{FEATHER: Fisher-Eigenvalue Adaptive Thresholding}
 \author{\todo{Name of First Author} and \todo{Name of Second Author}}
 \authorrunning{\todo{F. Author and S. Author}}
 \institute{\todo{Name of First Author} \at \todo{Name, Address of Institute}, \email{\todo{name@email.address}}
@@ -214,9 +215,15 @@ out-of-distribution detection: the Mahalanobis method
 \cite{lee2018mahalanobis} scores individual samples against class-conditional
 Gaussians fit to features, and Rabanser et al.'s strongest shift detector
 (BBSD) also runs a test on model representations
-\cite{rabanser2019failing}. What these methods lack is a criterion for
-\emph{which} feature directions matter to the task: they weight feature space
-by its variance or density, not by its effect on the model's decisions.
+\cite{rabanser2019failing}. Label-free drift detectors that read activations
+directly, without going through the outputs, also exist: Komorniczak and
+Ksieniewicz \cite{komorniczak2024parallel} derive drift signals from
+parallel activation patterns of a network, using no label information even
+offline. What all of these methods lack is a criterion for \emph{which}
+feature directions matter to the task: they weight feature space by its
+variance, density, or architecture-induced structure, not by its effect on
+the model's decisions --- the task-supervised Fisher weighting is exactly
+what distinguishes FEATHER from this line.
 Benchmarks in this area, notably the common-corruptions suite
 \cite{hendrycks2019benchmarking} that we also use, and the in-the-wild
 shifts of WILDS \cite{koh2021wilds}, likewise do not distinguish shift the
@@ -335,6 +342,18 @@ rank gap makes the split insensitive to $\tau$: in our ResNet-18 experiments
 $\lambda_9/\lambda_1 \approx 5 \times 10^{-2}$ while
 $\lambda_{10}/\lambda_1 \approx 10^{-16}$ (Fig.~\ref{fig:spectrum}), so any
 tolerance within fourteen orders of magnitude gives the same answer.
+
+A terminological point deserves care. Because each $g_i$ uses the
+\emph{observed} label $y_i$, $\F$ is the empirical (label-conditioned)
+Fisher, not the Fisher information proper, which takes the expectation over
+the model's own predictive distribution; the two can behave differently in
+optimization \cite{kunstner2019empirical}. For our purposes the choice is
+one of estimator convenience, not necessity: the true Fisher's per-sample
+covariance $\diag(p) - pp^\top$ also has rows summing to zero, so it too
+lives in $W^\top\!\mathcal{H}$ and the rank bound (\ref{eq:rank}) --- and
+with it the blind subspace of Proposition~\ref{prop:blind} --- is identical
+for both objects. We use the empirical variant because labels are available
+offline and it estimates the task-relevant gradients directly.
 Figure~\ref{fig:pipeline} shows the full pipeline.
 
 \begin{figure}[t]
@@ -422,6 +441,14 @@ The reference gradients $\{g_i\}$ span $W^\top\!\mathcal{H}$. This holds
 almost surely once $C$ generic samples are seen; empirically we observe the
 full rank $C-1$ in every run.
 \end{assumption}
+
+The full rank $C-1$ requires $\rank W \ge C-1$, which every model here
+satisfies. In a rank-deficient head ($\rank W < C-1$, e.g.\ a bottlenecked
+or weight-tied final layer), $\dim W^\top\!\mathcal{H} \le \rank W$: the
+sensitive subspace only shrinks and the blind subspace only grows.
+Proposition~\ref{prop:blind}'s characterization of $\mathcal{N}$ is
+unchanged; only the dimension count $d - C + 1$ becomes
+$d - \dim W^\top\!\mathcal{H} \ge d - \rank W$.
 
 \begin{proposition}[Detector blindness]
 \label{prop:blind}
@@ -681,7 +708,13 @@ monitoring, including the forward pass, adds 47 ms per 500-image batch; the
 projection itself is a $512 \times 503$ matrix--vector product, microseconds
 of it. Monitoring is strictly cheaper than the inference it monitors, which
 matters because a monitor that competes with serving for GPU time tends to
-get switched off.
+get switched off. The offline cost scales as $O(nd^2)$ for the Fisher
+construction plus $O(d^3)$ for the eigendecomposition: negligible at
+$d = 512$, still a one-time cost of seconds at the $d \approx 4096$ of large
+vision backbones, and beyond that the rank structure favors randomized
+eigensolvers \cite{halko2011structure}, since only the top $C-1$
+eigenvectors are ever needed to define $\mathcal{N}$. The online projection
+remains a single matrix--vector product at any $d$.
 
 \section{Limitations}
 \label{sec:limitations}
@@ -718,7 +751,7 @@ tools; it is the complement that covers the one region they provably cannot.
 \end{acknowledgement}
 
 \ethics{Competing Interests}{The authors have no conflicts of interest to
-declare that are relevant to the content of this chapter.}
+declare that are relevant to the content of this article.}
 
 \bibliographystyle{spmpsci}
 \bibliography{references}

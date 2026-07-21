@@ -339,7 +339,10 @@ model is sensitive to, which is precisely the harm-oriented criterion of
 requirement (2), the one neither input tests nor output statistics
 provide.
 
-The tool we use is the Fisher information of the model, a classical
+The tool we use is the Fisher information of the model --- in the
+empirical, label-conditioned form computable from offline reference data,
+whose distinction from the true Fisher is well documented
+\cite{kunstner2019empirical} --- a classical
 object from information geometry \cite{amari1998natural}. It already
 plays a central role in optimization \cite{martens2015kfac}, in the
 analysis of deep networks, whose Fisher spectra concentrate in a few
@@ -351,8 +354,10 @@ are to change, and that is what the harmful/benign distinction is about.
 Geometric ideas have started to appear in the monitoring literature,
 from score-vector control charts \cite{zhang2023score} to null-direction
 analyses of language-model representations \cite{pandey2025zdp}, so the
-direction is timely. As far as we know, though, no existing method
-connects this geometry to the harmful-versus-benign distinction
+direction is timely; label-free detectors that read network activations
+directly, without task supervision, exist as well
+\cite{komorniczak2024parallel}. As far as we know, though, no existing
+method connects this geometry to the harmful-versus-benign distinction
 operators actually need, with the calibration and cost of requirements
 (3) and~(4).
 
@@ -604,7 +609,7 @@ case are, we hope, made here.
 \end{acknowledgement}
 
 \ethics{Competing Interests}{The authors have no conflicts of interest to
-declare that are relevant to the content of this chapter.}
+declare that are relevant to the content of this paper.}
 
 \bibliographystyle{spmpsci}
 \bibliography{references}
