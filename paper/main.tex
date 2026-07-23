@@ -69,7 +69,9 @@ precision. On Rotated MNIST and CIFAR-10-C (five seeds each) the blind-shift
 score tracks the measured accuracy drop, the predicted rank structure
 appears exactly (nine informative directions out of 512 in a ResNet-18), and
 against a covariance ablation of itself the Fisher geometry nearly halves
-false alarms on benign episodes (46\% vs.\ 80\% at matched calibration).
+false alarms on benign episodes (48\% vs.\ 83\% under held-out calibration)
+while keeping the clean-stream false-alarm rate at its nominal budget (2\%
+vs.\ 28\% for the ablation).
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -91,7 +93,9 @@ precision. On Rotated MNIST and CIFAR-10-C (five seeds each) the blind-shift
 score tracks the measured accuracy drop, the predicted rank structure
 appears exactly (nine informative directions out of 512 in a ResNet-18), and
 against a covariance ablation of itself the Fisher geometry nearly halves
-false alarms on benign episodes (46\% vs.\ 80\% at matched calibration).
+false alarms on benign episodes (48\% vs.\ 83\% under held-out calibration)
+while keeping the clean-stream false-alarm rate at its nominal budget (2\%
+vs.\ 28\% for the ablation).
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -418,8 +422,12 @@ $d \times k$ projection per batch, where $k = \dim\mathcal{N}$.
 Thresholds for $m_t$ and $v_t$ are quantiles of their bootstrap distribution
 over clean reference batches, so the stationary false-alarm rate is a chosen
 parameter, not a tuned constant. We use 500 bootstrap batches and the 99th
-percentile throughout. Section~\ref{sec:calibration} reports a practical
-lesson about which data the bootstrap should resample.
+percentile throughout. The reference data plays two roles that must not
+share samples: a \emph{geometry} split fits the Fisher and covariance bases,
+and a disjoint \emph{calibration} split (a deterministic 50/50 partition)
+supplies $\mu_{\mathrm{ref}}$ and the bootstrap thresholds. Calibrating on
+the fitting split leaks the fit into the thresholds and makes them
+optimistic; Sect.~\ref{sec:calibration} measures the effect.
 
 \subsection{FEATHER-Lite}
 
@@ -508,10 +516,10 @@ decompositions exist \cite{halko2011structure} but were not needed).
 
 \runinhead{Models and Training.}
 A small CNN (two convolutional blocks, $d = 128$) trained on MNIST with Adam
-(learning rate $10^{-3}$, 5 epochs) to $99.00 \pm 0.05\%$ test accuracy, and
+(learning rate $10^{-3}$, 5 epochs) to $98.96 \pm 0.05\%$ test accuracy, and
 a CIFAR-adapted ResNet-18 ($3{\times}3$ stem, no max-pool, $d = 512$, 11.2M
 parameters) trained on CIFAR-10 with SGD (learning rate 0.1, cosine schedule,
-50 epochs, standard crop-and-flip augmentation) to $94.15 \pm 0.07\%$. Five
+50 epochs, standard crop-and-flip augmentation) to $94.14 \pm 0.20\%$. Five
 seeds per model; the seed fixes initialization, data order, and augmentation,
 and every run is resumable from checkpoints with full RNG state.
 
@@ -526,8 +534,8 @@ $96 \times 5 = 480$ CIFAR episodes and $7 \times 5 = 35$ MNIST episodes,
 \runinhead{Ground Truth.}
 We label episodes by \emph{measured} accuracy drop against the clean episode
 --- benign below 2 points, harmful above 10, gray between --- rather than by
-corruption name. Under this rule the CIFAR episodes split 60 benign, 134
-gray, 286 harmful. The data justify the caution: fog at severity 1 is
+corruption name. Under this rule the CIFAR episodes split 62 benign, 127
+gray, 291 harmful. The data justify the caution: fog at severity 1 is
 benign, fog at severity 5 costs over 30 points, and treating ``fog'' as one
 condition would average the two into meaninglessness.
 
@@ -656,30 +664,37 @@ Entropy rise & 1.000 & 1.000 \\
 \subsection{Fisher Versus Covariance: Same Pipeline, Half the False Alarms}
 
 The ablation differs from FEATHER in one matrix. Both monitors use the same
-blind dimension, the same bootstrap calibration at the 99th percentile, and
-the same statistics; one projects onto the low-Fisher subspace, the other
-onto the low-variance subspace of the activation covariance. On benign
-CIFAR-10-C episodes --- where a specific monitor should stay quiet --- the
-covariance monitor alarms on $79.7\%$ of batches, FEATHER on $45.8\%$; on
-harmful episodes both alarm on every batch (Table~\ref{tab:alarms}).
-Low-variance directions are apparently easy for benign corruptions to
-excite; low-Fisher directions less so. The gap is the empirical content of
-the Fisher weighting, and it answers the natural objection that the method
-is PCA in disguise.
+blind dimension, the same held-out bootstrap calibration at the 99th
+percentile, and the same statistics; one projects onto the low-Fisher
+subspace, the other onto the low-variance subspace of the activation
+covariance. On the clean CIFAR-10 test stream --- where the calibrated
+false-alarm budget should hold --- FEATHER alarms on $2.0 \pm 2.5\%$ of
+batches, consistent with the ${\le}2\%$ nominal rate of two union-combined
+99th-percentile tests, while the covariance monitor alarms on
+$28.0 \pm 8.7\%$. On benign corruption episodes --- drifted, but harmless to
+the model --- the covariance monitor alarms on $82.9 \pm 6.9\%$ of batches,
+FEATHER on $47.6 \pm 6.9\%$; on gray and harmful episodes both alarm on
+essentially every batch (Table~\ref{tab:alarms}). The benign gap is
+$35.3 \pm 3.6$ percentage points, positive for every seed; an exact paired
+sign-flip test across the five seeds gives $p = 0.0625$, the smallest value
+the design admits. Low-variance directions are apparently easy for benign
+corruptions --- and even for clean resampling --- to excite; low-Fisher
+directions less so. The gap is the empirical content of the Fisher
+weighting, and it answers the natural objection that the method is PCA in
+disguise.
 
 \begin{table}[!t]
-\caption{Batch-level alarm rates on CIFAR-10-C at matched calibration
-(99th-percentile bootstrap thresholds; five seeds). Both monitors catch
-every harmful batch; they differ on the benign episodes they should ignore.
-Both benign rates also reflect a calibration gap discussed in
-Sect.~\ref{sec:calibration}}
+\caption{Batch-level alarm rates on CIFAR-10-C under held-out calibration
+(99th-percentile bootstrap thresholds; mean $\pm$ std over five seeds).
+Both monitors catch every harmful batch; they differ on the clean stream
+and the benign episodes a harm-aware monitor should ignore}
 \label{tab:alarms}
-\begin{tabular}{p{4.2cm}p{2.6cm}p{2.6cm}}
+\begin{tabular}{p{2.9cm}p{2.15cm}p{2.15cm}p{2.15cm}p{2.15cm}}
 \hline\noalign{\smallskip}
-Monitor & Benign episodes & Harmful episodes \\
+Monitor & Clean & Benign & Gray & Harmful \\
 \noalign{\smallskip}\svhline\noalign{\smallskip}
-Covariance ablation & 0.797 & 1.000 \\
-FEATHER & \textbf{0.458} & 1.000 \\
+Covariance ablation & $0.28 \pm 0.09$ & $0.83 \pm 0.07$ & $1.00 \pm 0.00$ & $1.00 \pm 0.00$ \\
+FEATHER & $\mathbf{0.02 \pm 0.02}$ & $\mathbf{0.48 \pm 0.07}$ & $1.00 \pm 0.00$ & $1.00 \pm 0.00$ \\
 \noalign{\smallskip}\hline\noalign{\smallskip}
 \end{tabular}
 \end{table}
@@ -687,24 +702,31 @@ FEATHER & \textbf{0.458} & 1.000 \\
 \subsection{A Calibration Finding}
 \label{sec:calibration}
 
-Bootstrap thresholds are calibrated on the same reference split that fits the
-Fisher matrix, and this proves too optimistic: on MNIST even the unrotated
-test set --- statistically the same distribution --- exceeds the calibrated
-threshold, because the small train-to-test activation shift already has a
-blind-subspace component larger than within-reference resampling predicts.
-Episode-level conclusions are unaffected (all scores are computed relative to
-the clean episode), but deployed thresholds should be calibrated on a clean
-split held out from the Fisher fit. We flag this as a practical lesson the
-controlled experiments would not have revealed, and note that it echoes the
-general finding that uncertainty tooling degrades exactly where it is needed
-\cite{ovadia2019trust}.
+An earlier version of this pipeline calibrated the bootstrap thresholds on
+the same reference split that fits the Fisher matrix, and this proved too
+optimistic: the fit leaks into the thresholds, and even mild clean shift
+exceeded them. All numbers reported here therefore use the held-out
+protocol of Sect.~\ref{sec:method}: bases from the geometry split,
+thresholds from a disjoint calibration split. The correction lands the
+ResNet-18's clean-stream false alarms on the nominal budget
+(Table~\ref{tab:alarms}), which localizes the covariance ablation's $28\%$
+clean-stream alarm rate in the geometry it monitors, not in threshold
+leakage. One honest residual remains: for the small MNIST CNN, even
+held-out thresholds alarm on the \emph{unrotated} test set, because that
+model's train-to-test activation shift itself has a blind-subspace
+component larger than within-train resampling predicts. Episode-level
+conclusions are unaffected (all scores are computed relative to the clean
+episode), but deployed thresholds should be calibrated on reference data
+drawn from the deployment stream, not from training data alone. This
+echoes the general finding that uncertainty tooling degrades exactly where
+it is needed \cite{ovadia2019trust}.
 
 \subsection{Cost}
 
 For the ResNet-18, the one-time offline fit --- activation extraction over
 50{,}000 reference images, the exact Fisher matrix, eigendecomposition, and
-500 bootstrap batches --- takes 11.2 s on the workstation GPU. Online
-monitoring, including the forward pass, adds 47 ms per 500-image batch; the
+500 bootstrap batches --- takes 11.1 s on the workstation GPU. Online
+monitoring, including the forward pass, adds 48 ms per 500-image batch; the
 projection itself is a $512 \times 503$ matrix--vector product, microseconds
 of it. Monitoring is strictly cheaper than the inference it monitors, which
 matters because a monitor that competes with serving for GPU time tends to
@@ -731,8 +753,11 @@ false-alarm behavior but not the silent regime where
 Proposition~\ref{prop:blind} gives it a monopoly; constructing realistic
 silent-drift benchmarks --- perhaps from the wild shifts cataloged in WILDS
 \cite{koh2021wilds} rather than synthetic corruptions --- is, we think, the
-most valuable follow-up. Finally, thresholds should be calibrated on data
-held out from the Fisher fit (Sect.~\ref{sec:calibration}).
+most valuable follow-up. Finally, held-out calibration keeps the clean
+false-alarm rate at its budget only when the reference data matches the
+deployment stream; where the two differ --- as for the MNIST CNN's
+train-to-test activation shift --- thresholds must be recalibrated on
+deployment-matched data (Sect.~\ref{sec:calibration}).
 
 \section{Conclusion}
 \label{sec:conclusion}
