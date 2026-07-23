@@ -462,11 +462,15 @@ Table~\ref{tab:families}: classical stream detectors via River
 entropy-based output statistics \cite{hendrycks2017baseline,
 garg2022atc} as the label-free comparison; an error-proxy sequential
 detector in the spirit of Amoukou et al.\ \cite{amoukou2024sequential},
-the closest prior framing, whose proxy can be fit on the same held-out
-set our monitor uses; and, as the primary comparison, a
+the closest prior framing, whose proxy is fit on the same labeled
+calibration data our monitor uses; and, as the primary comparison, a
 variance-weighted feature-space monitor that swaps activation covariance
 in for Fisher information in an otherwise identical pipeline at
-identical calibration. This last baseline isolates whether task-aware
+identical calibration. Calibration itself follows a held-out protocol:
+the reference data is split deterministically, one half fitting each
+monitor's geometry and the other, disjoint half supplying its
+thresholds, so no threshold is calibrated on the data that shaped the
+statistic it gates. This last baseline isolates whether task-aware
 weighting earns its keep over the density geometry of prior
 feature-space methods \cite{lee2018mahalanobis}. It is the comparison
 the proposal lives or dies on.
@@ -508,9 +512,11 @@ monitoring is far cheaper than the inference it observes, so the
 experimental budget is hours rather than weeks. Skills: the theory sits
 in undergraduate linear algebra and probability, and the engineering is
 standard PyTorch. Schedule: the theory and the synthetic verification
-are already complete (Sect.~\ref{sec:synthetic}), the training and
-monitoring infrastructure is largely built, and what remains, benchmark
-execution and writing, can be split between the two team members.
+are complete (Sect.~\ref{sec:synthetic}), the training and monitoring
+infrastructure is built, and the benchmark execution on both suites has
+finished (five seeds per model, held-out calibration throughout); what
+remains --- the WILDS stretch goal, the output-baseline comparison, and
+the writing --- can be split between the two team members.
 
 Four risks dominate, each with a planned mitigation. The theory might
 fail to transfer from the synthetic setting to deep networks; the
@@ -520,7 +526,10 @@ we will report the transfer honestly either way. The benchmarks might
 saturate, with every detector succeeding; the pre-declared primary
 metric (false-alarm discipline at matched calibration) and the
 covariance baseline keep discriminating in that case, and the WILDS
-stretch task adds a non-synthetic setting. Compute shortfalls are
+stretch task adds a non-synthetic setting. The completed runs bore this
+out: threshold-free detection did saturate for every detector, and the
+primary metric separated the pipelines exactly as the design intended
+(the measured numbers belong to the full manuscript). Compute shortfalls are
 contained by small models and checkpoint-resume everywhere, so an
 interrupted run loses minutes, not days. Timeline pressure in the
 writing stage is absorbed by script-generated figures and tables, which
@@ -544,8 +553,9 @@ all fifteen post-onset batches. An equally large drift along the visible
 direction leaves the monitor at its noise floor, exactly as intended,
 since that drift is the kind output-based monitors already catch. Over
 two hundred clean batches, the stationary false-alarm rate stays within
-its calibrated budget. The verification suite behind these claims, 38
-tests covering the theory's predictions and the monitor's behavior, is
+its calibrated budget. The verification suite behind these claims ---
+now 69 tests covering the theory's predictions, the monitor's behavior,
+the held-out calibration protocol, and the output baselines --- is
 committed alongside the code and re-runs in seconds on a laptop CPU, so
 every number in this paragraph can be checked on demand.
 
