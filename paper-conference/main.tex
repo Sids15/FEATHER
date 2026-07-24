@@ -339,11 +339,12 @@ model is sensitive to, which is precisely the harm-oriented criterion of
 requirement (2), the one neither input tests nor output statistics
 provide.
 
-The tool we use is the Fisher information of the model --- in the
-empirical, label-conditioned form computable from offline reference data,
-whose distinction from the true Fisher is well documented
-\cite{kunstner2019empirical} --- a classical
-object from information geometry \cite{amari1998natural}. It already
+The tool we use is the Fisher information of the model, a classical
+object from information geometry \cite{amari1998natural}. We compute it
+in the empirical, label-conditioned form that the single offline
+reference set makes available; the distinction from the true Fisher is
+well documented \cite{kunstner2019empirical} and does not affect the
+structural property we rely on. Fisher information already
 plays a central role in optimization \cite{martens2015kfac}, in the
 analysis of deep networks, whose Fisher spectra concentrate in a few
 directions \cite{karakida2019universal}, and in continual learning,
@@ -354,8 +355,8 @@ are to change, and that is what the harmful/benign distinction is about.
 Geometric ideas have started to appear in the monitoring literature,
 from score-vector control charts \cite{zhang2023score} to null-direction
 analyses of language-model representations \cite{pandey2025zdp}, so the
-direction is timely; label-free detectors that read network activations
-directly, without task supervision, exist as well
+direction is timely. Label-free detectors that read network activations
+directly, without any task supervision, exist as well
 \cite{komorniczak2024parallel}. As far as we know, though, no existing
 method connects this geometry to the harmful-versus-benign distinction
 operators actually need, with the calibration and cost of requirements
@@ -466,14 +467,14 @@ the closest prior framing, whose proxy is fit on the same labeled
 calibration data our monitor uses; and, as the primary comparison, a
 variance-weighted feature-space monitor that swaps activation covariance
 in for Fisher information in an otherwise identical pipeline at
-identical calibration. Calibration itself follows a held-out protocol:
-the reference data is split deterministically, one half fitting each
-monitor's geometry and the other, disjoint half supplying its
-thresholds, so no threshold is calibrated on the data that shaped the
-statistic it gates. This last baseline isolates whether task-aware
+identical calibration. This last baseline isolates whether task-aware
 weighting earns its keep over the density geometry of prior
 feature-space methods \cite{lee2018mahalanobis}. It is the comparison
-the proposal lives or dies on.
+the proposal lives or dies on. Calibration follows a held-out protocol
+throughout: the reference data is split deterministically, one half
+fitting each monitor's geometry and the other, disjoint half supplying
+its thresholds, so no threshold is calibrated on the data that shaped
+the statistic it gates.
 
 \runinhead{Metrics.} Synthetic corruptions tend to be visible to every
 detector family at once, so threshold-free separation of harmful from
@@ -527,9 +528,10 @@ saturate, with every detector succeeding; the pre-declared primary
 metric (false-alarm discipline at matched calibration) and the
 covariance baseline keep discriminating in that case, and the WILDS
 stretch task adds a non-synthetic setting. The completed runs bore this
-out: threshold-free detection did saturate for every detector, and the
-primary metric separated the pipelines exactly as the design intended
-(the measured numbers belong to the full manuscript). Compute shortfalls are
+out: threshold-free detection did saturate for every detector, while the
+primary metric still separated FEATHER from its covariance ablation,
+exactly as the design intended (the measured numbers belong to the full
+manuscript). Compute shortfalls are
 contained by small models and checkpoint-resume everywhere, so an
 interrupted run loses minutes, not days. Timeline pressure in the
 writing stage is absorbed by script-generated figures and tables, which
