@@ -58,8 +58,22 @@ def _batch_slices(rows: list[dict]) -> list[slice]:
     return slices
 
 
-def refit_run(run_dir: Path, quantile: float | None = None) -> bool:
-    """Refit one run from its raw/ arrays; returns False when raw/ is absent."""
+_CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00"}
+
+
+def refit_run(run_dir: Path, quantile: float | None = None,
+              baseline_calibration: str = "train-split") -> bool:
+    """Refit one run from its raw/ arrays; returns False when raw/ is absent.
+
+    ``baseline_calibration``:
+    - ``"train-split"``: calibrate the output baselines on the held-out training
+      reference (calibration.npz) — the original protocol.
+    - ``"clean-heldout"``: calibrate them on the first half of the clean
+      deployment episode instead. The training reference is memorized by the
+      model, so its confidence/entropy sit far from the test stream's; that gap
+      makes training-split thresholds alarm on every clean *test* batch. The
+      deployment-matched split is the honest reference (paper Sect. 6.7).
+    """
     raw_dir = run_dir / "raw"
     fit_path = run_dir / "fit.json"
     if not (raw_dir / "calibration.npz").exists() or not fit_path.exists():
@@ -74,9 +88,14 @@ def refit_run(run_dir: Path, quantile: float | None = None) -> bool:
         seed=fit["seed"],
     )
     calibration = np.load(raw_dir / "calibration.npz")
-    baselines = fit_output_baselines(
-        _softmax(calibration["logits"]), calibration["labels"], config
-    )
+    if baseline_calibration == "clean-heldout":
+        clean_name = _CLEAN_EPISODE[fit["mode"]]
+        clean = np.load(raw_dir / f"episode_{clean_name}.npz")
+        half = len(clean["labels"]) // 2  # first half calibrates, rest is evaluated
+        base_logits, base_labels = clean["logits"][:half], clean["labels"][:half]
+    else:
+        base_logits, base_labels = calibration["logits"], calibration["labels"]
+    baselines = fit_output_baselines(_softmax(base_logits), base_labels, config)
 
     monitors = {}
     if quantile is not None:
@@ -122,6 +141,7 @@ def refit_run(run_dir: Path, quantile: float | None = None) -> bool:
         writer.writerows(rows)
     os.replace(tmp_path, csv_path)
 
+    fit["baseline_calibration"] = baseline_calibration
     fit["output_baselines"] = {
         name: {
             "direction": b.direction,
@@ -153,10 +173,15 @@ def main() -> None:
     parser.add_argument("--quantile", type=float, default=None,
                         help="also recalibrate the FEATHER/PCA thresholds at "
                         "this quantile and re-derive their alarm columns")
+    parser.add_argument("--baseline-calibration", default="train-split",
+                        choices=["train-split", "clean-heldout"],
+                        help="clean-heldout calibrates the output baselines on a "
+                        "held-out split of the clean deployment episode instead of "
+                        "the memorized training reference (fixes clean false alarms)")
     args = parser.parse_args()
 
     runs = args.runs or sorted(Path("outputs").glob("monitor_*"))
-    refitted = sum(refit_run(run, args.quantile) for run in runs)
+    refitted = sum(refit_run(run, args.quantile, args.baseline_calibration) for run in runs)
     logger.info("refit %d/%d runs", refitted, len(runs))
 
 

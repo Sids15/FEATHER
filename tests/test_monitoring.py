@@ -142,7 +142,22 @@ class TestMonitoringPipeline:
         raw = np.load(raw_path)
         assert raw["logits"].shape == (256, 10)
         assert raw["labels"].shape == (256,)
+        assert "phi" not in raw  # off by default
         assert sum(r["n"] for r in records) == 256
+
+    def test_run_episode_save_phi(self, model, tmp_path):
+        import numpy as np
+
+        geometry, calibration = split_reference_dataset(fake_mnist(), 0.5, seed=0)
+        bundle = fit_monitors(
+            model, geometry, calibration, DEVICE, batch_size=64, n_bootstrap=50
+        )
+        raw_path = tmp_path / "raw" / "episode_clean.npz"
+        run_episode(model, bundle, fake_mnist(seed=1), DEVICE, episode="clean",
+                    batch_size=64, raw_path=raw_path, save_phi=True)
+        raw = np.load(raw_path)
+        assert raw["phi"].shape == (256, 128)
+        assert raw["logits"].shape == (256, 10)
 
     def test_heldout_differs_from_same_split(self, model):
         geometry = fake_mnist(seed=0)

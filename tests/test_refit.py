@@ -75,6 +75,7 @@ def make_run(tmp_path: Path, with_baseline_columns=False) -> Path:
         writer.writerows(rows)
 
     (run / "fit.json").write_text(json.dumps({
+        "mode": "cifar10c",
         "batch_size": BATCH, "n_bootstrap": 50, "quantile": 0.99, "seed": 0,
         "feather_shift_threshold": 1.0, "feather_energy_threshold": 1.0,
         "pca_shift_threshold": 1.0, "pca_energy_threshold": 1.0,
@@ -92,6 +93,18 @@ class TestRefitRun:
         assert all(r["conf_score"] != "" for r in rows)
         fit = json.loads((run / "fit.json").read_text())
         assert set(fit["output_baselines"]) == {"atc", "conf", "entropy", "proxy"}
+
+    def test_clean_heldout_calibration_differs_and_records_mode(self, tmp_path):
+        run = make_run(tmp_path)
+        assert refit_run(run, baseline_calibration="clean-heldout")
+        fit = json.loads((run / "fit.json").read_text())
+        assert fit["baseline_calibration"] == "clean-heldout"
+        clean_thr = fit["output_baselines"]["conf"]["threshold"]
+        # train-split calibration yields a different threshold on the same run
+        run2 = make_run(tmp_path / "b")
+        refit_run(run2, baseline_calibration="train-split")
+        train_thr = json.loads((run2 / "fit.json").read_text())["output_baselines"]["conf"]["threshold"]
+        assert clean_thr != train_thr
 
     def test_matches_direct_computation(self, tmp_path):
         run = make_run(tmp_path)

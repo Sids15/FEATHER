@@ -73,8 +73,11 @@ false alarms on benign episodes (48\% vs.\ 83\% under held-out calibration)
 while keeping the clean-stream false-alarm rate at its nominal budget (2\%
 vs.\ 28\% for the ablation). These benchmarks produce output-visible drift
 throughout, so they exercise FEATHER's tracking and false-alarm discipline;
-drift confined to the blind subspace itself is demonstrated on the linear
-testbed and remains to be constructed at deep-network scale.
+to reach the silent regime we construct drift confined to the empirically
+identified blind subspace of the trained ResNet-18, where a shift that is
+invisible to every output statistic (softmax change below $10^{-10}$) drives a
+synthetic accuracy from $99\%$ to $7\%$ and is caught by FEATHER on every
+batch.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -100,8 +103,11 @@ false alarms on benign episodes (48\% vs.\ 83\% under held-out calibration)
 while keeping the clean-stream false-alarm rate at its nominal budget (2\%
 vs.\ 28\% for the ablation). These benchmarks produce output-visible drift
 throughout, so they exercise FEATHER's tracking and false-alarm discipline;
-drift confined to the blind subspace itself is demonstrated on the linear
-testbed and remains to be constructed at deep-network scale.
+to reach the silent regime we construct drift confined to the empirically
+identified blind subspace of the trained ResNet-18, where a shift that is
+invisible to every output statistic (softmax change below $10^{-10}$) drives a
+synthetic accuracy from $99\%$ to $7\%$ and is caught by FEATHER on every
+batch.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -667,6 +673,71 @@ Entropy rise & 1.000 & 1.000 \\
 \end{tabular}
 \end{table}
 
+\subsection{Deep-Feature Silent Drift}
+\label{sec:blinddeep}
+
+The benchmarks above are output-visible by construction, so they cannot
+exercise the one regime where Proposition~\ref{prop:blind} gives FEATHER a
+monopoly: drift the outputs \emph{cannot} express. We construct that regime
+directly on the trained ResNet-18, reusing its saved penultimate activations
+and blind basis (no retraining). For a clean batch of activations we inject a
+shift $\alpha u$ of growing magnitude along a unit direction $u$, and compare
+two choices of $u$: one drawn from the empirically identified blind subspace
+$\mathcal{N}$, and one from its sensitive complement $\mathcal{S}$. We measure
+the largest change this induces in any softmax output (all that an
+output-based monitor can ever see), FEATHER's alarm rate, and --- to test
+whether blind drift can be \emph{harmful} --- the accuracy under a synthetic
+label rule that reads the blind coordinate the model ignores, flipping a
+sample's label once its shifted coordinate leaves the clean tail.
+
+The contrast is total (Table~\ref{tab:blinddeep}, five seeds, $\alpha=0.3$).
+A blind-subspace shift large enough to trigger FEATHER on every batch moves
+the most-changed softmax probability by under $2\times10^{-10}$ and mean
+confidence and entropy by under $10^{-12}$ --- output invisibility that is
+numerical, not approximate, exactly as the algebra predicts on a real
+network. The same shift drives the synthetic accuracy from $99\%$ to $7\%$:
+harmful drift that no confidence-, entropy-, or proxy-based monitor can react
+to, caught by FEATHER on $100\%$ of batches. The sensitive-subspace control
+inverts every entry: the outputs move (top probability changes by $0.06$ at
+the same $\alpha$), an output monitor sees it, and FEATHER --- watching only
+$\mathcal{N}$ --- correctly stays at its $2\%$ floor. Figure~\ref{fig:blinddeep}
+traces the two effects as $\alpha$ grows: the FEATHER alarm rate rises through
+its calibrated threshold near $\alpha\approx0.1$ and the synthetic error climbs
+with it, while the output change never leaves the $10^{-10}$ floor. This is a
+\emph{deep-feature} confirmation of the blind spot; the drift is injected in
+activation space and the harm is defined by a synthetic rule, so it validates
+output-invisibility and FEATHER detection on a real network without yet
+claiming a pixel-space, real-label attack (Sect.~\ref{sec:limitations}).
+
+\begin{table}[!t]
+\caption{Deep-feature silent drift on the CIFAR-10 ResNet-18: a shift of
+magnitude $\alpha=0.3$ along the blind vs.\ the sensitive subspace (mean over
+five seeds). Blind drift is invisible to every output statistic yet harmful
+and FEATHER-visible; sensitive drift is the mirror image}
+\label{tab:blinddeep}
+\begin{tabular}{p{2.6cm}p{2.7cm}p{2.4cm}p{2.4cm}}
+\hline\noalign{\smallskip}
+Shift direction & Max output change & FEATHER alarm & Synthetic accuracy \\
+\noalign{\smallskip}\svhline\noalign{\smallskip}
+Blind ($\mathcal{N}$) & $1.7\times10^{-10}$ & $\mathbf{1.00}$ & $0.07$ \\
+Sensitive ($\mathcal{S}$) & $6.3\times10^{-2}$ & $0.02$ & $0.99$ \\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=8.4cm]{figures/blind_deep}
+\Description{Line plot over blind-subspace shift magnitude alpha from 0 to
+0.3. The FEATHER alarm rate rises from zero to one near alpha 0.1 and the
+hidden-label error rises with it toward one, while the maximum output-
+probability change stays flat on the floor near ten to the minus ten.}
+\caption{Blind-subspace drift on the trained ResNet-18. As the shift grows,
+FEATHER alarms and the synthetic error climb together, while the largest
+change in any model output never rises off its $10^{-10}$ floor}
+\label{fig:blinddeep}
+\end{figure}
+
 \subsection{Fisher Versus Covariance: Same Pipeline, Half the False Alarms}
 
 The ablation differs from FEATHER in one matrix. Both monitors use the same
@@ -756,10 +827,13 @@ that leaves activation marginals untouched is invisible to every label-free
 method, ours included. Our benchmarks, like most public corruption suites,
 generate output-visible drift, so they exercise FEATHER's tracking and
 false-alarm behavior but not the silent regime where
-Proposition~\ref{prop:blind} gives it a monopoly; constructing realistic
-silent-drift benchmarks --- perhaps from the wild shifts cataloged in WILDS
-\cite{koh2021wilds} rather than synthetic corruptions --- is, we think, the
-most valuable follow-up. Finally, held-out calibration keeps the clean
+Proposition~\ref{prop:blind} gives it a monopoly. Section~\ref{sec:blinddeep}
+reaches that regime on the trained network, but only semi-synthetically: the
+drift is injected in activation space and the harm is defined by a synthetic
+label rule. Closing the gap to a pixel-space perturbation whose feature
+displacement lands in $\mathcal{N}$ under unchanged real labels --- perhaps
+built from the wild shifts cataloged in WILDS \cite{koh2021wilds} rather than
+synthetic corruptions --- is, we think, the most valuable follow-up. Finally, held-out calibration keeps the clean
 false-alarm rate at its budget only when the reference data matches the
 deployment stream; where the two differ --- as for the MNIST CNN's
 train-to-test activation shift --- thresholds must be recalibrated on

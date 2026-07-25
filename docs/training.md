@@ -128,24 +128,45 @@ corrected protocol from the paper's calibration finding (Sect. 6.7). Confirm
 `"calibration_mode": "heldout"` in `fit.json`. `--calibration-mode
 same_split` reproduces the legacy (leaky) numbers only.
 
-Each run also saves `outputs/<out-name>/raw/` (per-episode logits + labels
-and the calibration arrays, ~40 MB per CIFAR run): with these, output-based
-baselines can be changed/added and thresholds recalibrated **offline** on
-the laptop via `python src\experiments\refit_baselines.py` — no GPU rerun.
-Keep `raw/` in the copied-back outputs.
+Each run also saves `outputs/<out-name>/raw/` (~55 MB per CIFAR run):
+per-episode logits + labels, the calibration arrays, and — for the clean
+deployment episode only — its activations (`phi`, so *every* monitor can be
+recalibrated offline, not just the output baselines). With these, baselines
+can be changed/added and thresholds recalibrated **offline** on the laptop via
+`python src\experiments\refit_baselines.py` — no GPU rerun. Keep `raw/` in the
+copied-back outputs.
 
-**Held-out calibration rerun (all 10 runs, then run `pytest` too):**
+**Full rerun (all 10 runs; `git pull` first, then `pytest`):**
 
 ```powershell
 foreach ($s in 0..4) {
   python src\experiments\run_monitoring.py --model outputs\mnist_seed$s\final_model.pt --mode rotated_mnist --out-name monitor_mnist_seed$s
   python src\experiments\run_monitoring.py --model outputs\cifar10_seed$s\final_model.pt --mode cifar10c --out-name monitor_cifar10_seed$s
 }
-python src\experiments\analyze_monitoring.py
 ```
 
-## 8. What to bring back from the workstation
+The activations for the clean episode are now saved by default, which enables
+the symmetric baseline comparison (M2) — see §9.
 
-Copy the whole `outputs/` and `logs/` folders back (small: a few hundred MB).
-`final_model.pt` feeds any rerun; `episodes.csv` + `fit.json` are all the
-analysis and paper figures need — the analysis runs on the laptop, no GPU.
+## 8. Offline analysis (laptop, no GPU)
+
+```powershell
+# M2: recalibrate the output baselines on deployment-matched clean data
+python src\experiments\refit_baselines.py --baseline-calibration clean-heldout
+python src\experiments\analyze_monitoring.py            # corrected Table 3 + baseline rows
+# M1: deep-feature silent-drift experiment (uses raw/ activations)
+python src\experiments\blind_subspace_deep.py           # Table 4 + blind_deep.png
+```
+
+`--baseline-calibration clean-heldout` calibrates the output baselines on a
+held-out split of the clean *test* stream, not the memorized training split
+(otherwise every clean test batch trips them — the train→test confidence gap).
+The symmetric version (FEATHER/PCA also recalibrated on clean-test activations)
+is available once the runs above have saved clean-episode `phi`.
+
+## 9. What to bring back from the workstation
+
+Copy `outputs/` and `logs/` back. `episodes.csv` + `fit.json` + `raw/` are all
+the offline analysis and paper figures need — everything in §8 runs on the
+laptop, no GPU.
+

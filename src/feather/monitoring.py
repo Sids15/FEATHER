@@ -237,6 +237,7 @@ def run_episode(
     episode: str,
     batch_size: int = 500,
     raw_path: str | Path | None = None,
+    save_phi: bool = False,
 ) -> list[dict]:
     """Stream one episode; return one record per batch (labels: eval only).
 
@@ -244,12 +245,19 @@ def run_episode(
     saved there as a compressed ``.npz`` (rows in stream order), so any
     output-based baseline can later be refit or added offline —
     ``src/experiments/refit_baselines.py`` — without redoing the GPU pass.
+    With ``save_phi`` the penultimate activations are saved too; enable it for
+    the clean deployment episode so *all* monitors (FEATHER/PCA included, not
+    only the output baselines) can be recalibrated offline on a held-out split
+    of deployment-matched clean data — the symmetric protocol of
+    Sect.~6.7. Activations are ~50x larger than logits, so leave it off
+    for the drift episodes.
     """
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     weight, bias = head_params(model)
     records = []
     raw_logits: list[np.ndarray] = []
     raw_labels: list[np.ndarray] = []
+    raw_phi: list[np.ndarray] = []
     for index, (inputs, targets) in enumerate(loader):
         phi = model.features(inputs.to(device)).cpu().numpy()
         logits = phi @ weight.T + bias
@@ -273,12 +281,16 @@ def run_episode(
         if raw_path is not None:
             raw_logits.append(logits.astype(np.float32))
             raw_labels.append(targets_np)
+            if save_phi:
+                raw_phi.append(phi.astype(np.float16))
     if raw_path is not None:
         raw_path = Path(raw_path)
         raw_path.parent.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(
-            raw_path,
-            logits=np.vstack(raw_logits),
-            labels=np.concatenate(raw_labels).astype(np.int64),
-        )
+        arrays = {
+            "logits": np.vstack(raw_logits),
+            "labels": np.concatenate(raw_labels).astype(np.int64),
+        }
+        if save_phi:
+            arrays["phi"] = np.vstack(raw_phi)
+        np.savez_compressed(raw_path, **arrays)
     return records

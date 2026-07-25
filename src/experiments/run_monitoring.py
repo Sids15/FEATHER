@@ -185,12 +185,16 @@ def main() -> None:
     writer = None
     online_seconds = 0.0
     n_batches = 0
+    clean_episode = "clean" if args.mode == "cifar10c" else "rotation_00"
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         for episode, dataset in episodes_for(args):
             start = time.perf_counter()
             records = run_episode(
                 model, bundle, dataset, device, episode, batch_size=args.batch_size,
                 raw_path=None if raw_dir is None else raw_dir / f"episode_{episode}.npz",
+                # keep activations for the clean deployment episode only, so all
+                # monitors can be recalibrated offline on deployment-matched data
+                save_phi=(raw_dir is not None and episode == clean_episode),
             )
             online_seconds += time.perf_counter() - start
             n_batches += len(records)
