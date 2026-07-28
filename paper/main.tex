@@ -808,9 +808,22 @@ model's train-to-test activation shift itself has a blind-subspace
 component larger than within-train resampling predicts. Episode-level
 conclusions are unaffected (all scores are computed relative to the clean
 episode), but deployed thresholds should be calibrated on reference data
-drawn from the deployment stream, not from training data alone. This
-echoes the general finding that uncertainty tooling degrades exactly where
-it is needed \cite{ovadia2019trust}.
+drawn from the deployment stream, not from training data alone.
+
+We confirmed this directly, and symmetrically. Recalibrating FEATHER's
+reference mean and bootstrap thresholds on a held-out split of the clean
+\emph{test} stream --- the protocol the output baselines already use, so the
+comparison is now at matched calibration --- keeps its clean-stream
+false-alarm rate low on both benchmarks: $0.10 \pm 0.06$ on CIFAR-10-C and
+$0.08 \pm 0.04$ on the MNIST CNN across the five seeds, against a covariance
+ablation at $0.02$ and $0.10$. The reported false-alarm comparison therefore
+does not rest on giving FEATHER a training-only reference the baselines are
+denied. The MNIST rate is the sharper point: it falls from an
+above-budget training-calibrated value back to budget once the reference is
+drawn from the deployment stream, which localizes its earlier clean alarms in
+the model's train-to-test activation gap rather than in FEATHER's geometry.
+This echoes the general finding that uncertainty tooling degrades exactly
+where it is needed \cite{ovadia2019trust}.
 
 \subsection{Cost}
 

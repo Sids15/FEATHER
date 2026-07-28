@@ -1,0 +1,34 @@
+{
+  "cifar10c": {
+    "feather": {
+      "clean": {
+        "mean": 0.1,
+        "std": 0.0632,
+        "n_seeds": 5
+      }
+    },
+    "pca": {
+      "clean": {
+        "mean": 0.02,
+        "std": 0.04,
+        "n_seeds": 5
+      }
+    }
+  },
+  "rotated_mnist": {
+    "feather": {
+      "clean": {
+        "mean": 0.08,
+        "std": 0.04,
+        "n_seeds": 5
+      }
+    },
+    "pca": {
+      "clean": {
+        "mean": 0.1,
+        "std": 0.0894,
+        "n_seeds": 5
+      }
+    }
+  }
+}

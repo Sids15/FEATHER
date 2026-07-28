@@ -85,6 +85,12 @@ def parse_args() -> argparse.Namespace:
                         help="save per-episode logits/labels and the calibration "
                         "arrays under outputs/<out-name>/raw/ so baselines and "
                         "thresholds can be refit offline without a GPU rerun")
+    parser.add_argument("--save-all-phi", action="store_true",
+                        help="also save activations (phi) for EVERY episode, not "
+                        "just the clean one, so FEATHER/PCA can be recalibrated "
+                        "offline on clean-test data and re-scored on every episode "
+                        "(the symmetric baseline comparison). Larger raw/ (~1 GB "
+                        "per CIFAR run); requires --save-raw")
     parser.add_argument("--corruptions", nargs="*", default=None,
                         help="cifar10c only: subset of corruptions (default all 19)")
     parser.add_argument("--data-root", default=None, help="overrides FEATHER_DATA_DIR")
@@ -192,9 +198,12 @@ def main() -> None:
             records = run_episode(
                 model, bundle, dataset, device, episode, batch_size=args.batch_size,
                 raw_path=None if raw_dir is None else raw_dir / f"episode_{episode}.npz",
-                # keep activations for the clean deployment episode only, so all
-                # monitors can be recalibrated offline on deployment-matched data
-                save_phi=(raw_dir is not None and episode == clean_episode),
+                # keep activations for the clean deployment episode so every
+                # monitor can be recalibrated offline on deployment-matched data;
+                # --save-all-phi keeps them for every episode too, which lets the
+                # subspace monitors be re-scored under clean-test calibration
+                save_phi=(raw_dir is not None
+                          and (episode == clean_episode or args.save_all_phi)),
             )
             online_seconds += time.perf_counter() - start
             n_batches += len(records)

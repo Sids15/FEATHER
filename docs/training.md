@@ -145,8 +145,22 @@ foreach ($s in 0..4) {
 }
 ```
 
-The activations for the clean episode are now saved by default, which enables
-the symmetric baseline comparison (M2) — see §9.
+The activations for the clean episode are saved by default. To also compare
+FEATHER against the output baselines at **matched calibration** (recalibrate
+FEATHER/PCA on clean-test data and re-score *every* episode, not just the
+clean one), add `--save-all-phi` to the `run_monitoring.py` calls — it keeps
+each episode's activations (`phi`), ~1 GB extra per CIFAR run:
+
+```powershell
+foreach ($s in 0..4) {
+  python src\experiments\run_monitoring.py --model outputs\mnist_seed$s\final_model.pt  --mode rotated_mnist --out-name monitor_mnist_seed$s  --save-all-phi
+  python src\experiments\run_monitoring.py --model outputs\cifar10_seed$s\final_model.pt --mode cifar10c      --out-name monitor_cifar10_seed$s --save-all-phi
+}
+```
+
+Then `symmetric_feather.py` (§8) reports the benign/gray/harmful alarm rates
+under clean-test calibration; without `--save-all-phi` it reports the clean
+false-alarm rate only.
 
 ## 8. Offline analysis (laptop, no GPU)
 
@@ -156,6 +170,8 @@ python src\experiments\refit_baselines.py --baseline-calibration clean-heldout
 python src\experiments\analyze_monitoring.py            # corrected Table 3 + baseline rows
 # M1: deep-feature silent-drift experiment (uses raw/ activations)
 python src\experiments\blind_subspace_deep.py           # Table 4 + blind_deep.png
+# M2 (symmetric): FEATHER/PCA recalibrated on clean-test, re-scored per episode
+python src\experiments\symmetric_feather.py             # paper/tables/symmetric_feather.json
 ```
 
 `--baseline-calibration clean-heldout` calibrates the output baselines on a
