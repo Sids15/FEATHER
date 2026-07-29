@@ -818,7 +818,13 @@ false-alarm rate low on both benchmarks: $0.10 \pm 0.06$ on CIFAR-10-C and
 $0.08 \pm 0.04$ on the MNIST CNN across the five seeds, against a covariance
 ablation at $0.02$ and $0.10$. The reported false-alarm comparison therefore
 does not rest on giving FEATHER a training-only reference the baselines are
-denied. The MNIST rate is the sharper point: it falls from an
+denied. The separation the paper turns on survives this calibration as well:
+re-scoring every CIFAR-10-C episode against the clean-test reference, the blind
+subspace still alarms on fewer benign shifts than the covariance ablation
+($0.59 \pm 0.05$ versus $0.67 \pm 0.05$) while both flag every harmful one
+($1.00 \pm 0.00$), so FEATHER's benign--harmful margin is a property of the
+monitored geometry, not of an advantageous reference split. The MNIST rate is
+the sharper point: it falls from an
 above-budget training-calibrated value back to budget once the reference is
 drawn from the deployment stream, which localizes its earlier clean alarms in
 the model's train-to-test activation gap rather than in FEATHER's geometry.

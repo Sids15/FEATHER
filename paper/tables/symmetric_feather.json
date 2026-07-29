@@ -5,12 +5,42 @@
         "mean": 0.1,
         "std": 0.0632,
         "n_seeds": 5
+      },
+      "benign": {
+        "mean": 0.5852,
+        "std": 0.0518,
+        "n_seeds": 5
+      },
+      "gray": {
+        "mean": 0.9985,
+        "std": 0.0014,
+        "n_seeds": 5
+      },
+      "harmful": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 5
       }
     },
     "pca": {
       "clean": {
         "mean": 0.02,
         "std": 0.04,
+        "n_seeds": 5
+      },
+      "benign": {
+        "mean": 0.6711,
+        "std": 0.0503,
+        "n_seeds": 5
+      },
+      "gray": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 5
+      },
+      "harmful": {
+        "mean": 1.0,
+        "std": 0.0,
         "n_seeds": 5
       }
     }
@@ -21,12 +51,42 @@
         "mean": 0.08,
         "std": 0.04,
         "n_seeds": 5
+      },
+      "benign": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 1
+      },
+      "gray": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 4
+      },
+      "harmful": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 5
       }
     },
     "pca": {
       "clean": {
         "mean": 0.1,
         "std": 0.0894,
+        "n_seeds": 5
+      },
+      "benign": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 1
+      },
+      "gray": {
+        "mean": 1.0,
+        "std": 0.0,
+        "n_seeds": 4
+      },
+      "harmful": {
+        "mean": 1.0,
+        "std": 0.0,
         "n_seeds": 5
       }
     }
