@@ -515,9 +515,10 @@ in undergraduate linear algebra and probability, and the engineering is
 standard PyTorch. Schedule: the theory and the synthetic verification
 are complete (Sect.~\ref{sec:synthetic}), the training and monitoring
 infrastructure is built, and the benchmark execution on both suites has
-finished (five seeds per model, held-out calibration throughout); what
-remains --- the WILDS stretch goal, the output-baseline comparison, and
-the writing --- can be split between the two team members.
+finished (five seeds per model, held-out calibration throughout),
+including the output-baseline comparison; what remains --- the WILDS
+stretch goal and the writing --- can be split between the two team
+members.
 
 Four risks dominate, each with a planned mitigation. The theory might
 fail to transfer from the synthetic setting to deep networks; the
@@ -529,9 +530,11 @@ metric (false-alarm discipline at matched calibration) and the
 covariance baseline keep discriminating in that case, and the WILDS
 stretch task adds a non-synthetic setting. The completed runs bore this
 out: threshold-free detection did saturate for every detector, while the
-primary metric still separated FEATHER from its covariance ablation,
-exactly as the design intended (the measured numbers belong to the full
-manuscript). Compute shortfalls are
+primary metric still separated FEATHER from its covariance ablation ---
+and did so even when FEATHER's own reference was calibrated on the
+deployment stream, symmetrically with the output baselines, so the margin
+is not an artifact of a privileged reference (the measured numbers belong
+to the full manuscript). Compute shortfalls are
 contained by small models and checkpoint-resume everywhere, so an
 interrupted run loses minutes, not days. Timeline pressure in the
 writing stage is absorbed by script-generated figures and tables, which
