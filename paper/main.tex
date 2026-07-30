@@ -455,6 +455,22 @@ Proposition~\ref{prop:blind}'s characterization of $\mathcal{N}$ is
 unchanged; only the dimension count $d - C + 1$ becomes
 $d - \dim W^\top\!\mathcal{H} \ge d - \rank W$.
 
+Before the formal statement it helps to picture $\mathcal{N}$ in the smallest
+case. Take two classes ($C = 2$) and a two-dimensional feature space
+($d = 2$), with weight vectors $w_1, w_2 \in \R^2$, the rows of $W$. The
+classifier's decision rides on the single logit difference
+$(w_1 - w_2)^\top\act + (b_1 - b_2)$, so the one direction the outputs
+actually track is $w_1 - w_2$, the normal to the decision boundary, and
+everything orthogonal to it is blind. Put $w_1 = (1,0)$ and $w_2 = (0,1)$: the
+sensitive direction is $w_1 - w_2 \propto (1,-1)$ and the blind direction is
+$(1,1)$. Shifting $\act$ along $(1,1)$ adds the same amount to both logits,
+since $W(1,1)^\top = (1,1)^\top = \mathbf{1}$, and the softmax cancels it. You
+can move the data as far as you like along $(1,1)$ and the confidence, the
+entropy, and the predicted label all sit exactly where they were.
+Proposition~\ref{prop:blind} is this picture at full dimension: the outputs
+see the $(C-1)$-dimensional span of logit differences, and the remaining
+$d - C + 1$ directions make up the blind subspace.
+
 \begin{proposition}[Detector blindness]
 \label{prop:blind}
 Under Assumption~\ref{ass:span},
@@ -670,18 +686,30 @@ Entropy rise & 1.000 & 1.000 \\
 
 The benchmarks so far are output-visible by construction, so none of them can
 probe the one regime where Proposition~\ref{prop:blind} hands FEATHER a
-monopoly: drift the outputs simply \emph{cannot} express. We build that regime
+monopoly: drift the outputs simply \emph{cannot} express. To get there we have
+to manufacture drift that lives inside the blind subspace, and we do it
 directly on the trained ResNet-18, reusing its saved penultimate activations
 and blind basis, with no retraining. Onto a clean batch of activations we add
-a shift $\alpha u$ of growing size along a unit direction $u$, and we try two
-choices of $u$: one from the empirically identified blind subspace
-$\mathcal{N}$, and one from its sensitive complement $\mathcal{S}$. We record
-the biggest change this forces in any softmax output (everything an
-output-based monitor could ever hope to see), FEATHER's alarm rate, and, to
-check whether blind drift can actually be \emph{harmful}, the accuracy under a
-synthetic label rule that keys on the blind coordinate the model ignores,
-flipping a sample's label once its shifted coordinate falls outside the clean
-tail.
+a shift $\alpha u$ of growing size along a unit direction $u$, trying two
+choices of $u$: one drawn from the empirically identified blind subspace
+$\mathcal{N}$, and one from its sensitive complement $\mathcal{S}$. For each we
+record three things: the largest change the shift forces in any softmax
+output, which is everything an output-based monitor could ever hope to see;
+FEATHER's alarm rate; and, so that ``harmful'' stays measured rather than
+assumed, the accuracy under a synthetic label rule.
+
+That label rule is what lets a shift the model cannot see still count as real
+damage. We let the ground-truth label depend on the sample's coordinate along
+the blind direction $u$, the very coordinate the frozen head discards, and we
+flip the label once a shifted sample's coordinate moves past its clean range.
+The correct answer therefore changes along $u$ while every logit, and with it
+every output statistic, stays frozen. This is the silent failure from the
+introduction made concrete: the world has moved somewhere the model is
+structurally unable to follow, the outputs report business as usual, and only
+a monitor watching $\mathcal{N}$ has any way to notice. The
+sensitive-direction run is the mirror-image control, where the same
+construction should move the outputs, wake the output monitors, and leave
+FEATHER quiet.
 
 The contrast could not be sharper (Table~\ref{tab:blinddeep}, five seeds,
 $\alpha=0.3$). A blind-subspace shift big enough to set FEATHER off on every
@@ -847,6 +875,45 @@ Past that, the rank structure plays into randomized eigensolvers
 \cite{halko2011structure}, since only the top $C-1$ eigenvectors ever matter
 for defining $\mathcal{N}$. The online projection stays a single
 matrix--vector product at any $d$.
+
+\section{Discussion}
+\label{sec:discussion}
+
+It is worth being plain about what the two benchmark regimes establish,
+because they point in opposite directions and both readings matter. On the
+public corruption suites FEATHER does not beat the output-based monitors on
+false alarms, and Proposition~\ref{prop:blind} is exactly why: that drift is
+output-visible, so confidence and entropy have real signal to work with and
+they use it well. The regime where FEATHER is the only monitor left standing
+is the silent one of Sect.~\ref{sec:blinddeep}, which those benchmarks never
+enter. So the practical picture is not FEATHER \emph{versus} the output
+family; it is the two of them side by side. An operator can run a cheap
+confidence- or entropy-based monitor for the visible failures and FEATHER for
+the blind ones, and because the two alarm on disjoint parts of drift space,
+neither one makes the other redundant.
+
+The comparison we hold most tightly fixed is the one against the covariance
+ablation, and it isolates the single design choice we most want to defend:
+weighting activation directions by the task, through the Fisher matrix,
+instead of by their variance. Same pipeline, same blind dimension, same
+calibration; only the weighting changes, and trading Fisher for covariance
+nearly doubles the benign false alarms (Table~\ref{tab:alarms}). The reason is
+geometric. A benign corruption, or even ordinary resampling, stirs the
+low-variance directions a covariance monitor treats as informative, while the
+low-Fisher directions FEATHER discards are precisely the ones the model's
+decisions never depend on. Task-aware weighting is not a tuning detail here;
+it is what keeps the monitor quiet on the drift the model can absorb.
+
+The saturation result is a finding in its own right. Every detector we tried,
+ours included, pulls harmful from benign at ceiling on both suites
+(Table~\ref{tab:auroc}), which means these benchmarks cannot rank label-free
+monitors on the question deployment actually asks. Two habits would help, and
+we follow both: score an episode's harm from held-out labels rather than read
+it off a corruption name, and judge a monitor by its false-alarm discipline on
+benign drift, not by detection power alone. Better still would be benchmarks
+that build in the silent regime on purpose, realistic shift that leaves the
+outputs untouched, since that is where label-free monitoring is currently
+blind and where the real differences between methods have to show up.
 
 \section{Limitations}
 \label{sec:limitations}
