@@ -178,7 +178,23 @@ different types of shifts can also happen together. Another important
 factor that plays into effect is how the shift happens over time. It can
 be abrupt, gradual, incremental, or recurring \cite{gama2014survey,
 lu2018learning}. Because of this, a detector designed mainly for sudden
-changes may fail to detect a slow drift.
+changes may fail to detect a slow drift. Figure~\ref{fig:drift-types}
+shows these four profiles side by side.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/drift_types}
+\Description{Four line plots of a data statistic against time, labeled
+sudden, gradual, incremental, and recurring. In the sudden panel the
+statistic steps up once and stays there. In gradual it drifts upward over
+a stretch of time. In incremental it rises in stages to a new level. In
+recurring it switches back and forth between two levels.}
+\caption{Four ways drift shows up over time: sudden (abrupt), gradual,
+incremental, and recurring. A detector tuned for one of these profiles can
+easily miss another, which is why the speed of a shift matters as much as
+its size}
+\label{fig:drift-types}
+\end{figure}
 
 These categories tell us what type of change has happened in the data, but
 they do not tell us whether that change actually affects the model. A
@@ -315,6 +331,23 @@ name on the corruption tells you nothing about whether this particular
 model actually loses accuracy to it. That gap is the reason we measure
 harmfulness directly instead of taking it for granted.
 
+\subsection{Monitoring in Production ML Systems}
+
+There is a systems side to this problem too, separate from the detector
+math. Sculley et al.\ \cite{sculley2015debt} made the point that a deployed
+model is only a small piece of a much larger system, and that its data
+dependencies are where a lot of the long-term cost hides. Drift is one of
+those dependencies. In practice the monitor is just one more service in a
+pipeline. It reads the same stream the model reads, it has a compute
+budget, and it competes with the model for that budget. Streaming toolkits
+such as River \cite{montiel2021river} exist because this online, one-pass
+setting is its own engineering problem and not only a modeling one.
+Benchmarks built from naturally occurring shift, such as WILDS
+\cite{koh2021wilds}, matter here for the same reason. They test a monitor
+against the kind of drift a real pipeline meets, rather than a corruption
+picked for being easy to spot. We keep this systems view in mind when we
+set the cost and calibration requirements in the next section.
+
 \begin{table*}[t]
 \caption{The three families of deployed-model monitors: each one either
 needs labels it will not get, ignores whether the shift matters, or
@@ -334,6 +367,20 @@ Output-based estimators & MSP \cite{hendrycks2017baseline}, DoC \cite{guillory20
 \section{Problem Statement}
 \label{sec:problem}
 
+\subsection{Operating Setting}
+
+It helps to picture where this monitor actually sits. A trained model is
+deployed behind a serving endpoint. Requests arrive as a continuous
+stream, the model answers each one, and those answers feed straight into
+some downstream product. Nothing pauses to say whether the answers are
+still any good. Labels, when they arrive at all, come from a separate and
+much slower loop. Take a fraud model as an example. A charge is scored in
+milliseconds, but whether it was really fraud may only be known weeks
+later, once a chargeback comes back. The monitor has to run inside the
+fast loop, on the unlabeled stream, and it has to be light enough that
+nobody minds leaving it switched on. This is the setting the rest of the
+paper assumes.
+
 With that background, here is the problem we set ourselves. A classifier
 $f$ is deployed and frozen. Batches of unlabeled data come in as a stream.
 Once, offline, before any of this starts, we get a single labeled held-out
@@ -350,6 +397,8 @@ it is supposed to be. A shift that looks dramatic but costs no accuracy is
 benign as far as we are concerned; a quiet one that costs a lot is harmful.
 That is what keeps the evaluation clear of the benchmark problem we pointed
 out in Section~\ref{sec:survey}.
+
+\subsection{Requirements}
 
 Out of all this, four requirements fall out for a monitor worth having:
 
@@ -670,6 +719,23 @@ approximations \cite{martens2015kfac} can keep the computations manageable.
 It could also be extended to study representational drift in large language
 models \cite{pandey2025zdp}. Neither fits inside the current project; we
 mark them as the natural next steps.
+
+\subsection{Limitations and Threats to Validity}
+
+A few limits are worth stating plainly. The strongest evidence in this
+paper is synthetic, and a closed-form testbed is a friendly place for any
+method. The deep-network results that would really test the idea sit in
+the full manuscript, not here. The characterization we lean on is exact
+for the softmax head we study, and we do not yet claim it carries over
+unchanged to every architecture. The Fisher information we use is the
+empirical, label-conditioned kind, which is what a single offline
+reference set allows, and it is not the true Fisher
+\cite{kunstner2019empirical}. We argue the gap does not touch the property
+we depend on, but that argument belongs to the full manuscript as well.
+Finally, all of our runs sit on a single workstation, so we report
+variation across seeds rather than across large-scale deployments. None of
+these sink the project, but a reader deserves to know where the evidence
+is still thin.
 
 \section{Conclusion}
 \label{sec:conclusion}
