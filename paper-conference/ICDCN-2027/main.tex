@@ -12,6 +12,11 @@
 % including figures/tables/references. Relaxed double-blind: no author
 % names or affiliations in the document; own prior work cited in third
 % person.
+%
+% Prose is kept in sync with ../main.tex (the SNmult conference paper);
+% only the LaTeX scaffolding differs. Obvious mechanical slips in the
+% source (missing spaces, doubled punctuation, a couple of typos) are
+% cleaned up here without changing wording.
 
 \documentclass[sigconf,authordraft]{acmart}
 
@@ -43,25 +48,25 @@ Detection of Harmful Data Drift in Deployed Classifiers}
 \renewcommand{\shortauthors}{Anonymous et al.}
 
 \begin{abstract}
-A classifier's accuracy does not stay fixed once the model is deployed.
-The input data keeps changing, and the labels that would tell us the model
-has started to fail usually arrive late, if they arrive at all. Label-free
-monitors try to fill this gap, but the ones we have tend to fall into one
-of two groups. One group raises an alarm whenever the input distribution
-moves, whether the change is harmful or not. The other reads the model's
-own outputs, such as confidence, entropy, and uncertainty, and infers the
-model's health from them. This is awkward, because those same outputs
-become unreliable under exactly the shifts a monitor is meant to catch. We
-take a different starting point. This paper introduces FEATHER
-(Fisher-Eigenvalue Adaptive Thresholding for Error-Robust Drift Detection),
-an ongoing project built around the geometry of the deployed model rather
-than its data or its outputs. The question it asks is not whether the data
-changed, but whether it changed somewhere the model can actually react to.
-The paper reviews the concept-drift problem, walks through the main
-families of monitoring methods and where they fall short, states the
-harmful-drift problem we are after, and lays out our research questions,
-evaluation plan, feasibility case, and early results on a synthetic testbed
-where every claim can be checked against an exact answer.
+A classifier's accuracy does not hold still once it is deployed. The input
+data keeps moving, and the labels that would tell us the model has started
+failing usually show up late, if they show up at all. Label-free monitors
+try to fill that gap, but the ones we have tend to fall into one of two
+camps. One camp raises an alarm whenever the input distribution moves,
+harmful or not. The other reads the model's own outputs (confidence,
+entropy, uncertainty) and infers health from them, which is awkward,
+because those same outputs get unreliable under exactly the shifts a
+monitor is there to catch. We take a different starting point. This paper
+introduces FEATHER (Fisher-Eigenvalue Adaptive Thresholding for
+Error-Robust Drift Detection), an ongoing project built around the
+geometry of the deployed model rather than its data or its outputs. The
+question it asks is not whether the data changed, but whether it changed
+somewhere the model can actually react to. The paper reviews the
+concept-drift problem, walks through the main families of monitoring
+methods and where they fall short, states the harmful-drift problem we are
+after, and lays out our research questions, evaluation plan, feasibility
+case, and early results on a synthetic testbed where every claim can be
+checked against an exact answer.
 \end{abstract}
 
 \begin{CCSXML}
@@ -96,216 +101,219 @@ evaluation, machine learning systems}
 \section{Introduction}
 \label{sec:intro}
 
-Accuracy on launch day is not accuracy forever. Once a model is deployed,
-the data it receives can start changing over time. Users may behave
-differently, a sensor can be replaced, lighting conditions can change,
-the vocabulary in use can change, and fraud patterns can adapt to the
-methods used to detect them. Some of these changes may not affect the
-model much, while others can slowly reduce its performance without being
-noticed. This problem is not new. Sculley et al.\ \cite{sculley2015debt}
-identified changing input distributions as one of the major sources of
-technical debt in production machine learning systems back in 2015.
-Today the problem is commonly studied as \emph{concept drift}
-\cite{gama2014survey, lu2018learning}.
+Accuracy on launch day is not accuracy forever. The data a deployed model
+receives starts to change over time. Users may behave differently, a
+sensor may be replaced, the lighting may change, the vocabulary that is
+used may change, and fraud patterns can adapt to the methods that are used
+to detect them. Some of these changes don't affect the model much, while
+some changes can reduce the performance of the model and still remain
+unnoticed. This problem is not new. Back in 2015, Sculley et al.\
+\cite{sculley2015debt} identified the changing of input distributions as
+one of the major sources of technical debt in production machine learning
+systems. Today, this problem is commonly studied and known as
+\emph{concept drift} \cite{gama2014survey, lu2018learning}.
 
-The effect of drift also depends on where the model is used. For example,
-an outdated recommender system may lower user engagement, while errors in
-a credit-risk model can lead to financial loss and may also raise
-regulatory concerns. A triage model in a hospital, or the perception
-stack in a self-driving car, can cost much more than that. But the real
-danger is not the size of the failure. It is how quiet the failure is. A
-model whose assumptions no longer hold does not raise an error. It keeps
-returning predictions that look normal, and it stays wrong, at scale,
-until someone finally notices.
+The effect of drift also depends on where the model is being used. For
+example, an outdated recommender system may result in lower user
+engagement, while errors in a credit-risk model can lead to financial loss
+and may also create regulatory concerns. A triage model in a hospital, or
+the perception stack in a car, can cost a great deal more than that. The
+dangerous thing, though, is not really the size of the failure but how
+quiet it is. A model whose assumptions have expired does not throw an
+error. It keeps handing back predictions that look perfectly ordinary, and
+it goes on being wrong, at scale, for as long as it takes somebody to
+notice.
 
-Detecting change by itself is not the hard part. Sequential change
-detectors go back to Page's CUSUM chart in 1954 \cite{page1954cusum}, and
-for the last two decades the stream-mining community has adapted them to
-learning systems \cite{gama2004learning, baena2006eddm, bifet2007adwin,
-raab2020kswin}. The real problem is that ``did the data change?'' is the
-wrong question. In a real stream the data is always changing. What the
-person running the model actually wants to know is whether the model
-still works, and the labels that would answer this arrive late, or only
-in small amounts, or never. A loan can take months to default. A support
-ticket sent to the wrong queue is quietly fixed by whoever receives it,
-and that correction never reaches the model. Since these labels are
-missing, every monitor we can actually deploy is only a stand-in for
-accuracy, not a direct measurement of it. Our argument is that the field
-has not paid enough attention to which stand-in it chooses.
+Spotting change, on its own, is not the difficult part. Sequential change
+detectors have been around since Page's CUSUM chart in 1954
+\cite{page1954cusum}, and for the last twenty years or so the
+stream-mining community has been adapting them to learning systems
+\cite{gama2004learning, baena2006eddm, bifet2007adwin, raab2020kswin}.
+The difficulty is that ``did the data change?'' is the wrong question. In
+any real stream the data is always changing. What the person running the
+model actually wants to know is whether the model still works, and the
+labels that would answer that show up late, or only in dribs and drabs, or
+never. A loan takes months to default. A support ticket that got routed to
+the wrong queue is quietly fixed by whoever it lands on, who has no channel
+back to the model. Because those labels are missing, every monitor you can
+actually deploy is standing in for accuracy rather than measuring it. Our
+claim is that the field has not looked hard enough at which stand-in it
+picks.
 
 This paper is the introductory piece of an ongoing project we call
 FEATHER (Fisher-Eigenvalue Adaptive Thresholding for Error-Robust drift
 detection). We have kept its scope narrow on purpose. How the method is
-actually built, the theory behind it, and the results on deep networks
-all belong to the full manuscript we are still writing, not to this
-paper. What we do here is set up the ground the project rests on.
-Section~\ref{sec:background} explains what concept drift is and why, in
-practice, the split that matters is harmful versus benign rather than the
+actually built, the theory behind it, and the results on deep networks all
+belong to the full manuscript we are still writing, not to this paper.
+What we do here is lay the ground the project rests on.
+Section~\ref{sec:background} says what concept drift is and why, in
+operation, the split that matters is harmful versus benign rather than the
 textbook taxonomy. Section~\ref{sec:survey} goes through the existing
 monitor families and the gap they leave open. Section~\ref{sec:problem}
-states the problem and what we would ask of any reasonable solution.
+pins down the problem and what we would demand of any decent solution.
 Section~\ref{sec:project} explains the methodology, including the guiding
-hypothesis, the evaluation plan, and the feasibility of the project.
+hypothesis, evaluation plan, and feasibility of the project.
 Section~\ref{sec:synthetic} presents the initial results from the
-synthetic testbed, and Section~\ref{sec:outcomes} discusses the findings
-and the directions that lie beyond the project.
+synthetic testbed, while Section~\ref{sec:outcomes} discusses the findings
+and future directions.
 
 \section{Background: What Concept Drift Is}
 \label{sec:background}
 
-Let $X$ represent the model input and $Y$ represent the target. A
-supervised model learns from samples following a joint distribution
-$P(X, Y)$. \emph{Dataset shift} refers to any change in this distribution
-between the training and deployment stages \cite{quinonero2009dataset}.
-It usually gets split into three kinds. In \emph{covariate shift} the
-input distribution $P(X)$ changes while $P(Y \mid X)$ remains the same.
-This can happen because of a new camera sensor or a different group of
-users. In \emph{label shift} the class distribution $P(Y)$ changes while
-the classes themselves stay similar. For example, during flu season the
-number of flu patients increases, but the characteristics of flu do not
-change \cite{lipton2018label}. In \emph{concept shift} $P(Y \mid X)$
-itself changes, so a transaction that was considered legitimate earlier
-may now be considered fraud. In real data streams these types of shift
-often occur together, and they can also arrive at different speeds:
-abrupt, gradual, incremental, or recurring \cite{gama2014survey,
+Let the model input be represented by $X$ and the target be represented by
+$Y$. A supervised model learns from samples that follow a joint
+distribution $P(X, Y)$. Any change in this distribution between the
+training and deployment stages is referred to as \emph{dataset shift}
+\cite{quinonero2009dataset}. It usually gets split into three kinds. In
+\emph{covariate shift} the input distribution $P(X)$ changes while
+$P(Y \mid X)$ remains the same. For example, this can happen because of a
+new camera sensor or a different group of users. In \emph{label shift} the
+class distribution $P(Y)$ changes while the classes themselves remain
+similar. For example, the number of flu patients increases during the flu
+season, but the characteristics of flu do not change
+\cite{lipton2018label}. In \emph{concept shift} $P(Y \mid X)$ itself
+changes. For example, a transaction that was considered legitimate earlier
+may now be considered as a fraud. In data streams of the real-world, these
+different types of shifts can also happen together. Another important
+factor that plays into effect is how the shift happens over time. It can
+be abrupt, gradual, incremental, or recurring \cite{gama2014survey,
 lu2018learning}. Because of this, a detector designed mainly for sudden
-changes may fail to notice a slow drift.
+changes may fail to detect a slow drift.
 
-These categories tell us what type of change has happened in the data,
-but they do not tell us whether that change actually affects the model. A
+These categories tell us what type of change has happened in the data, but
+they do not tell us whether that change actually affects the model. A
 large covariate shift may have almost no effect on a robust model. At the
 same time, a much smaller shift near a sensitive part of the decision
 boundary may cause a large drop in performance. Following the definition
 used in recent work \cite{amoukou2024sequential}, we consider a shift
 \emph{harmful} when it causes a measurable drop in the accuracy of the
-deployed model, and \emph{benign} when it does not. Our project mainly
-focuses on this harmful-versus-benign difference rather than only
+deployed model, and \emph{benign} when it does not. Our project focuses
+mainly on this harmful-versus-benign difference, rather than only
 separating shifts into covariate, label, and concept shift. There is
-evidence that this is the right choice. Rabanser et al.\
-\cite{rabanser2019failing} found that how loudly a shift is detected has
-little to do with how much damage it does. A monitor that only reports
-that ``something changed'' has really just passed the work on to whoever
-is on call.
+evidence this is the right call: Rabanser et al.\ \cite{rabanser2019failing}
+found that how loudly a shift is detected has little to do with how much
+damage it does. A monitor that reports ``something changed'' and stops
+there has handed the actual work to whoever is on call.
 
-Retraining does not solve this problem either. It needs the very labels
-the stream is not providing, it does not tell anyone that something has
-gone wrong, and it does nothing about the predictions already served
-before the new model is deployed. Monitoring and retraining work
-alongside each other; one does not replace the other \cite{lu2018learning}.
+Retraining is not a way out of this, either. It wants the very labels the
+stream is not giving you, it does not tell anyone that something went
+wrong, and it does nothing about the predictions already served before the
+new model went in. Monitoring and retraining sit alongside each other; one
+does not replace the other \cite{lu2018learning}.
 
 \section{Literature Review}
 \label{sec:survey}
 
-The existing work sorts fairly cleanly into three families, based on
-which signal each one watches: the labels (when they are available), the
-inputs, or the model's own outputs. Table~\ref{tab:families} places the
-three side by side.
+The existing work sorts fairly cleanly into three families, by which
+signal each one watches: the labels (when you have them), the inputs, or
+the model's own outputs. Table~\ref{tab:families} lays the three side by
+side.
 
 \subsection{Error-Rate Detectors: The Right Question, the Wrong Input}
 
 The classical stream-mining detectors go straight at the model's error
-rate, an idea borrowed from statistical process control
-\cite{page1954cusum}. DDM raises an alarm once the online error rate
-climbs a set margin above its running minimum \cite{gama2004learning}.
-EDDM adapts the same idea for drift that appears gradually
-\cite{baena2006eddm}. ADWIN keeps an adaptive window and splits it
-whenever two halves of that window begin to disagree, and it comes with
-real false-positive guarantees \cite{bifet2007adwin}. All of these ask
-the right question, which is whether the model is failing, but to answer
-it they need the one thing deployment does not provide: a label for every
-prediction. When the labels are late, this only turns silent failure into
-slow-motion failure, and slow-motion failure is still not the same as
-catching the problem in time. The River library \cite{montiel2021river}
-provides solid implementations, which at least makes these easy baselines
-to compare against.
+rate, an idea lifted from statistical process control \cite{page1954cusum}.
+DDM fires once the online error rate climbs a set margin above its running
+minimum \cite{gama2004learning}; EDDM reworks the same idea for drift that
+comes on gradually \cite{baena2006eddm}; ADWIN holds an adaptive window and
+chops it whenever two halves of that window start to disagree, and it comes
+with real false-positive guarantees \cite{bifet2007adwin}. These are all
+asking the right thing, is the model failing, but to do it they need the
+one thing deployment refuses to hand over, which is a label for every
+single prediction. When the labels are late, all this really buys you is
+that silent failure turns into slow-motion failure, and slow-motion
+failure is not the same as catching the problem in time. The River library
+\cite{montiel2021river} ships solid implementations, which at least makes
+them easy baselines to run against.
 
 \subsection{Input-Distribution Tests: Sensitive but Indiscriminate}
 
-The second family gives up on labels and instead asks whether the
-incoming inputs still resemble the reference data. These methods mainly
-use two-sample testing to detect changes between distributions. This
-includes kernel-based methods such as Maximum Mean Discrepancy
+The second family gives up on labels and asks instead whether the incoming
+inputs still resemble the reference data. These methods usually use
+two-sample testing to detect changes between distributions. This includes
+kernel-based methods such as Maximum Mean Discrepancy
 \cite{gretton2012kernel}, window-based Kolmogorov--Smirnov tests such as
-KSWIN \cite{raab2020kswin}, and lower-dimensional methods that run the
-test on the model's representations instead of on raw pixels
+KSWIN \cite{raab2020kswin}, and lower-dimensional methods that perform the
+test on model representations instead of directly using raw pixels
 \cite{rabanser2019failing}. For shifts with a specific structure, such as
 label shift, separate estimators have also been developed
 \cite{lipton2018label}.
 
 The sensitivity of these methods is useful for detecting distribution
-changes, but it also creates a limitation. The test measures how
-different two distributions are, but it does not measure how much that
-difference affects the model. Rabanser et al.\ \cite{rabanser2019failing}
-showed that these detectors can reliably flag synthetic corruptions,
-including ones that do not actually harm the model. If a monitoring system
-raises an alarm for every small or harmless change, these alarms
-eventually become less useful in practice. The same work names the
+changes, but it also creates a limitation. The test measures how different
+two distributions are, but it does not measure how much that difference
+affects the model. Rabanser et al.\ \cite{rabanser2019failing} showed that
+these detectors can reliably detect synthetic corruptions, including the
+ones that do not actually harm the model. If a monitoring system gives
+alarms for every small or harmless change, these alarms can eventually
+become less useful in practice. The same work identifies the
 characterization of harmful shifts as an open problem, and this is the
-problem we focus on in this project.
+problem that we focus on in this project.
 
 \subsection{Output-Based Estimators: The Right Question, a Compromised Witness}
 
 The most recent group of methods uses the model's own outputs to monitor
-its performance. One starting point was the maximum-softmax-probability
-baseline, which showed that the confidence of a classifier carries useful
-information about whether its prediction is correct
-\cite{hendrycks2017baseline}. After this, different methods began using
-confidence to estimate accuracy. Some use differences in confidence
-\cite{guillory2021doc}, some use a learned confidence threshold whose
-exceedance rate tracks accuracy \cite{garg2022atc}, and others use a
-prediction-uncertainty index that can move before the error rate does
-\cite{pudd2025}. The work closest to our problem is Amoukou et al.\
-\cite{amoukou2024sequential}, where harmful shifts are detected
-sequentially without labels. They use an error proxy to score the
-incoming stream and a sequential test to control the false-alarm rate. On
-the statistics side, process-control charts have also been carried over
-to model monitoring through score vectors \cite{zhang2023score}.
+its performance. One of the starting points was the
+maximum-softmax-probability baseline, which showed that the confidence of
+a classifier gives useful information about whether its prediction is
+correct \cite{hendrycks2017baseline}. After this, different methods started
+using confidence to estimate accuracy. Some use differences in confidence
+\cite{guillory2021doc}, some use a learned confidence threshold where the
+exceedance rate is used to track accuracy \cite{garg2022atc}, and others
+use a prediction-uncertainty index that can change before the error rate
+starts changing \cite{pudd2025}. The work closest to our problem is
+Amoukou et al.\ \cite{amoukou2024sequential}, where harmful shifts are
+detected sequentially without labels. They use an error proxy to score the
+incoming stream and a sequential test to control the false-alarm rate.
+Meanwhile the statistics side has carried process-control charts over to
+model monitoring by way of score vectors \cite{zhang2023score}.
 
-This is the first family that actually asks the operator's question, and
-much of the time it answers it well. The problem is the witness it relies
+This is the first family that actually asks the operator's question, and a
+lot of the time it answers it well. The problem is the witness it relies
 on. Deep networks are miscalibrated in a fairly systematic way even on
-in-distribution data \cite{guo2017calibration}, and the calibration gets
-worse under exactly the distribution shift the monitor is meant to catch
-\cite{ovadia2019trust}. Building a monitor on a sensor that is least
-reliable when we need it most is an uncomfortable position.
+in-distribution data \cite{guo2017calibration}, and the calibration only
+gets worse under precisely the distribution shift the monitor exists to
+catch \cite{ovadia2019trust}. Building on a sensor that is at its worst
+exactly when you need it most is an uneasy place to stand.
 
 There is a second problem, separate from calibration, and we do not think
-it has been examined closely. A method that uses only the model outputs
-cannot detect information that is not present in those outputs. Defining
-harm through accuracy does not fully solve this, because accuracy depends
-on both the model predictions and the true labels. Consider a stream
-where the predictions stay the same after a shift, but the true labels
-begin to change. A monitor that only looks at the outputs will not notice
-this change, even though the model may now be making errors. This raises
-an important question: is this region of change, the part that cannot be
-expressed through the outputs, very small, or does it have some larger
-structure? This question can be studied directly from the model
-architecture. It is also where our project begins, while the complete
-analysis is kept for the full manuscript.
+it has been looked at closely. The main limitation is that a method using
+only the model outputs cannot detect information that is not present in
+those outputs. As accuracy depends on both the model predictions and the
+true labels, defining harm using accuracy does not completely solve this
+problem. Consider a stream where the predictions remain the same even
+after a shift, but the actual correct labels start changing. A monitor
+which only looks at the outputs will not detect this change, even though
+the model may now be making errors. This raises an important question: is
+this region of change that cannot be expressed through the outputs very
+small, or does it have some larger structure? This is a question that can
+be studied directly from the model architecture. It is also where our
+project starts, while the complete analysis is kept for the full
+manuscript.
 
 \subsection{Feature-Space Methods and Benchmarks}
 
 Another related approach comes from out-of-distribution detection, where
-monitoring is done in the model's penultimate feature space. The
+monitoring is done using the model's penultimate feature space. The
 Mahalanobis method scores samples using class-conditional Gaussian
 distributions fitted in this feature space \cite{lee2018mahalanobis}.
-Representation-level two-sample tests were also among the strongest
-detectors in Rabanser et al.\ \cite{rabanser2019failing}. Looking at the
-feature space makes sense, because the model has already turned the input
-into the features it considers useful. However, these methods mainly rank
-directions by variance or density instead of by how important those
-directions are for the actual task. Because of this, they can still be
-performance-agnostic in the same way as raw input tests.
+Representation-level two-sample tests were also found to be among the
+strongest detectors in Rabanser et al.\ \cite{rabanser2019failing}. Looking
+at the feature space makes sense because the model has already converted
+the input into features that it considers useful. However, these methods
+mainly consider directions based on variance or density instead of how
+important those directions are for the actual task. Because of this, they
+can still be performance-agnostic in a similar way to raw input tests.
 
-For evaluation, most of the field relies on corruption suites, above all
-CIFAR-10-C, with its 19 corruption types at 5 severities each
-\cite{hendrycks2019benchmarking}. Rotated-digit streams appear at smaller
-scale, and WILDS provides shift that occurs naturally rather than by
-design \cite{koh2021wilds}. One point about these benchmarks matters
-later: they grade how detectable a corruption is, not how much it costs.
-The name of the corruption tells us nothing about whether this particular
+For evaluation, most of the field leans on corruption suites, CIFAR-10-C
+above all, with its 19 corruption types at 5 severities each
+\cite{hendrycks2019benchmarking}. Rotated-digit streams show up at smaller
+scale, and WILDS supplies shift that occurs naturally rather than by
+design \cite{koh2021wilds}. One thing about these benchmarks matters later
+on: they grade how detectable a corruption is, not how much it costs. The
+name on the corruption tells you nothing about whether this particular
 model actually loses accuracy to it. That gap is the reason we measure
-harmfulness directly instead of assuming it.
+harmfulness directly instead of taking it for granted.
 
 \begin{table*}[t]
 \caption{The three families of deployed-model monitors: each one either
@@ -326,23 +334,22 @@ Output-based estimators & MSP \cite{hendrycks2017baseline}, DoC \cite{guillory20
 \section{Problem Statement}
 \label{sec:problem}
 
-With that background, here is the problem we set for ourselves. A
-classifier $f$ is deployed and frozen. Batches of unlabeled data arrive
-as a stream. Once, offline, before any of this begins, we are given a
-single labeled held-out set drawn from the training-time distribution.
-From then on the monitor has to decide, batch by batch, whether the
-stream has drifted in a way that would plausibly cost $f$ some accuracy.
-Just as importantly, it has to stay quiet when the drift is something $f$
-can handle.
+With that background, here is the problem we set ourselves. A classifier
+$f$ is deployed and frozen. Batches of unlabeled data come in as a stream.
+Once, offline, before any of this starts, we get a single labeled held-out
+set drawn from the training-time distribution. From then on the monitor
+has to make a call batch by batch: has the stream drifted in a way that
+would plausibly cost $f$ some accuracy? And, just as importantly, it has
+to keep quiet when the drift is something $f$ can handle.
 
-One thing we want to be firm about from the start is how the ground truth
-is decided. In every experiment, whether an episode is harmful is
-\emph{measured}, by scoring the deployed model on held-out labels for
-that episode. We never read it off the name of the perturbation or its
-supposed severity. A shift that looks dramatic but costs no accuracy is
-benign as far as we are concerned, and a quiet one that costs a lot is
-harmful. This is what keeps the evaluation clear of the benchmark problem
-we pointed out in Section~\ref{sec:survey}.
+One thing we want to be firm about from the start is how ground truth gets
+decided. In every experiment, whether an episode is harmful is
+\emph{measured}, by scoring the deployed model on held-out labels for that
+episode. We never read it off the name of the perturbation or how severe
+it is supposed to be. A shift that looks dramatic but costs no accuracy is
+benign as far as we are concerned; a quiet one that costs a lot is harmful.
+That is what keeps the evaluation clear of the benchmark problem we pointed
+out in Section~\ref{sec:survey}.
 
 Out of all this, four requirements fall out for a monitor worth having:
 
@@ -362,84 +369,82 @@ Out of all this, four requirements fall out for a monitor worth having:
 None of the methods in Table~\ref{tab:families} satisfy all four
 requirements. Error-rate charts do not satisfy requirement~(1), while
 input-based tests do not satisfy requirement~(2). Output-based estimators
-satisfy both~(1) and~(2), but they still have the reliability issues
-reported in \cite{guo2017calibration, ovadia2019trust}. They also have
-the structural limitation discussed above, where some changes cannot be
-detected from the model outputs alone.
+are able to satisfy both~(1) and~(2), but they still have the reliability
+issues reported in \cite{guo2017calibration, ovadia2019trust}. They also
+have the structural limitation discussed above, where some changes cannot
+be detected from the model outputs alone.
 
 \section{Proposed Methodology}
 \label{sec:project}
 
 \subsection{Guiding Hypothesis}
 
-FEATHER is our attempt to build the monitor around the deployed model's
-own geometry instead of around its raw data or its final outputs. The
-intuition is not complicated. A trained classifier does not use its
-internal representation evenly. Some directions in feature space carry
-the information its decisions actually depend on, and others provably
-carry none. Suppose we could identify that split for the one specific
-model in front of us, rather than on average across models. Then we could
-sort drift by \emph{where it lands} relative to what the model is
-sensitive to. That sorting is the harm-oriented test of requirement~(2),
-the one that neither the input tests nor the output statistics can
-provide.
+FEATHER is our try at building the monitor around the deployed model's own
+geometry instead of around its raw data or its final outputs. The
+intuition behind it is not complicated. A trained classifier does not lean
+on its internal representation evenly: some directions in feature space
+carry the information its decisions actually turn on, and others provably
+carry none. Now suppose you could nail down that split for the one specific
+model in front of you, rather than on average across models. Then you could
+sort drift by \emph{where it lands} relative to what the model is sensitive
+to. That sorting is the harm-oriented test of requirement~(2), the one that
+neither the input tests nor the output statistics can give you.
 
-The object we rely on is the model's Fisher information, a classical
-piece of information geometry \cite{amari1998natural}. We use it in the
-empirical, label-conditioned form, which is what a single offline
-reference set actually allows us to compute. The gap between this
-empirical version and the true Fisher is well understood
-\cite{kunstner2019empirical}, and it does not affect the structural
-property we depend on. Fisher information is not exotic here. It is
-central to optimization \cite{martens2015kfac}, it appears in the
-analysis of deep networks, whose Fisher spectra concentrate in a handful
-of directions \cite{karakida2019universal}, and it drives continual
-learning, where it decides which weights are too important to disturb
-\cite{kirkpatrick2017overcoming}. The reason it fits monitoring is the
-same reason it fits those settings: it measures how sensitive the model's
-predictions are to a change, and sensitivity is the whole point of the
-harmful-versus-benign split. Geometry has begun to appear in monitoring
-as well, from score-vector control charts \cite{zhang2023score} to
+The object we lean on is the model's Fisher information, a classical piece
+of information geometry \cite{amari1998natural}. We use it in the
+empirical, label-conditioned form, which is what a single offline reference
+set actually lets you compute. The gap between this empirical version and
+the true Fisher is well understood \cite{kunstner2019empirical}, and it
+does not touch the structural property we depend on. Fisher information is
+hardly exotic here: it is central to optimization \cite{martens2015kfac},
+it shows up in the analysis of deep networks, whose Fisher spectra pile up
+in a handful of directions \cite{karakida2019universal}, and it drives
+continual learning, where it decides which weights are too important to
+disturb \cite{kirkpatrick2017overcoming}. The reason it fits monitoring is
+the same reason it fits those settings: it measures how sensitive the
+model's predictions are to a change, and sensitivity is the whole point of
+the harmful-versus-benign split. Geometry has started showing up in
+monitoring, too, from score-vector control charts \cite{zhang2023score} to
 null-direction analyses of language-model representations
-\cite{pandey2025zdp}. There are also label-free detectors that read
-network activations directly, with no task supervision at all
-\cite{komorniczak2024parallel}. Still, as far as we can tell, no one has
-connected this geometry to the harmful-versus-benign decision that
-operators actually need, and done so within the calibration and cost
-limits of requirements~(3) and~(4).
+\cite{pandey2025zdp}, so the timing is good. There are also label-free
+detectors that read network activations directly, with no task supervision
+at all \cite{komorniczak2024parallel}. Still, as far as we can tell, nobody
+has tied this geometry to the harmful-versus-benign call that operators
+actually need, and done it inside the calibration and cost limits of
+requirements~(3) and~(4).
 
 We are keeping the method at this level of detail for now. The exact
-formulation, the guarantees we can prove, and the experimental results
-are part of the full manuscript, which is currently in preparation. In
-this paper we mainly focus on explaining the problem, the existing gap,
-and how we plan to address it.
+formulation, the guarantees that we can prove, and the experimental results
+are part of the full manuscript which is currently in preparation. In this
+paper, we mainly focus on explaining the problem, the existing gap, and how
+we plan to address it.
 
 \subsection{A First Look, in Pictures}
 \label{sec:glimpse}
 
-Figure~\ref{fig:geometry-toy} shows the idea with a simple example. We
-take a frozen two-class classifier in a two-dimensional feature space,
-with the dashed line as its decision boundary, and then let the data
-drift. When we move the data along the red arrow, the classes move across
-the decision boundary. The predictions start to change, and we also see
-changes in confidence and entropy. This means the output-based monitors
-discussed in Section~\ref{sec:survey} have changes in the outputs that they
-can detect. Now we move the data by the same distance along the violet
-arrow, which runs parallel to the decision boundary. In this case the
-model outputs do not change. None of the predictions change, and the
-confidence and entropy stay exactly as they were. Even if the data keeps
-moving in this direction, the output statistics still show no change.
+Figure~\ref{fig:geometry-toy} shows the idea using a simple example. We
+take a frozen two-class classifier in a two-dimensional feature space, with
+the dashed line showing its decision boundary, and then let the data drift.
+When we move the data along the red arrow, the classes move across the
+decision boundary. The predictions start changing and we also see changes
+in confidence and entropy. This means the output-based monitors discussed
+in Section~\ref{sec:survey} have changes in the outputs that they can
+detect. Now we move the data by the same distance along the violet arrow,
+which is parallel to the decision boundary. In this case, the model outputs
+do not change. None of the predictions change, and the confidence and
+entropy also remain exactly the same as before. Even if the data continues
+moving in this direction, the output statistics will still show no change.
 
-Both of these directions are computed from the frozen model itself and
-are not chosen by hand. They come from the Fisher-information analysis
-used in this project. In two dimensions this is easy to show, but the
-important question is whether the same idea is useful for real models.
-This depends mainly on two things: how large this invisible region is for
-real architectures, and whether harmful drift actually occurs inside it.
-The first question has an exact answer, which is stated in RQ1 and proved
-in the full manuscript. The second question is tested through the
-benchmark study. We intentionally leave the answers to these two
-questions out of this paper.
+Both of these directions are calculated from the frozen model itself and
+are not manually selected. They come from the Fisher-information analysis
+used in this project. In two dimensions, this can be shown easily, but the
+important question is whether the same idea is useful for real models. This
+mainly depends on two things: how large this invisible region is for real
+architectures, and whether harmful drift actually occurs inside this
+region. The first question has an exact answer, which is covered by RQ1 and
+proved in the full manuscript. The second question is tested through the
+benchmark study. We intentionally do not include the answers to these two
+questions in this paper.
 
 \begin{figure}[t]
 \centering
@@ -476,153 +481,154 @@ Three questions run through the whole project:
   baselines and over stripped-down, geometry-free versions of itself?
 \end{enumerate}
 
-In concrete terms, the project will deliver four things: a formal answer
+In concrete terms, the project will hand back four things: a formal answer
 to RQ1 for softmax classifiers; a monitor for RQ2 whose per-batch cost is
 one small linear-algebra step; a calibration routine that turns the
-false-alarm budget into a setting the operator controls; and the RQ3
-evaluation itself. What we expect to be new is the combination. Earlier
-work has the harmful-shift problem but not the geometry
-\cite{amoukou2024sequential}, or the geometric machinery but not the
-harmful-versus-benign question \cite{zhang2023score, pandey2025zdp}.
-FEATHER sits at the point where the two meet.
+false-alarm budget into a knob the operator sets; and the RQ3 evaluation
+itself. What we expect to be new is the join. Earlier work has the
+harmful-shift problem but not the geometry \cite{amoukou2024sequential}, or
+the geometric machinery but not the harmful-versus-benign question
+\cite{zhang2023score, pandey2025zdp}. FEATHER sits at the point where the
+two meet.
 
 \subsection{Evaluation Protocol}
 \label{sec:protocol}
 
-\paragraph{Datasets and Streams.} We begin the evaluation with two
-benchmarks. The first is Rotated MNIST, where we rotate the test images
-by fixed angles to create drift step by step. The second is CIFAR-10-C
-\cite{hendrycks2019benchmarking}, which contains 19 corruption types at 5
-severity levels, along with the clean data. For both benchmarks the data
-is fed to the model in batches, while the model itself is trained only on
-clean data. We also train the models with several different seeds instead
-of relying on a single training run, which lets us report the variation
-between runs alongside the final results. If time allows, we also plan to
-test one natural distribution shift from WILDS \cite{koh2021wilds}.
-Camelyon17 is currently the main candidate, since the dataset is
-manageable in size and the shift comes from real data rather than an
-artificial corruption.
+\paragraph{Datasets and Streams.} We start the evaluation with two
+benchmarks. The first one is Rotated MNIST, where we rotate the test images
+by fixed angles to create the drift step by step. The second one is
+CIFAR-10-C \cite{hendrycks2019benchmarking}, which contains 19 different
+corruption types with 5 severity levels, along with the clean data. For
+both benchmarks, the data is given to a model in batches, while the model
+itself is trained only on clean data. We also train the models using
+different seeds instead of depending on one training run. This allows us to
+report the variation between runs along with the final results. If we have
+enough time, we also plan to test one natural distribution shift from WILDS
+\cite{koh2021wilds}. Camelyon17 is currently the main option since the
+dataset is manageable in size and the shift comes from real data rather
+than an artificially created corruption.
 
 \paragraph{Harm Labeling.} As discussed in Section~\ref{sec:problem}, each
 episode is tagged harmful or benign by the accuracy it actually loses
-relative to the clean episode. Episodes that fall in the gray band
-between the two thresholds are dropped from detection scoring rather than
-quietly shoved onto one side or the other.
+relative to the clean episode. Episodes that fall in the gray band between
+the two thresholds are dropped from detection scoring rather than quietly
+shoved onto one side or the other.
 
-\paragraph{Baselines.} We include one representative from each family in
+\paragraph{Baselines.} We line up one representative from each family in
 Table~\ref{tab:families}. The classical stream detectors, run through
-River \cite{montiel2021river}, are used wherever labels are available.
+River \cite{montiel2021river}, go in wherever labels are available.
 Confidence- and entropy-based output statistics \cite{hendrycks2017baseline,
-garg2022atc} form the label-free comparison. An error-proxy sequential
+garg2022atc} are the label-free comparison. An error-proxy sequential
 detector, built in the spirit of Amoukou et al.\
-\cite{amoukou2024sequential} as the nearest prior framing, fits its proxy
-on the same labeled calibration data our own monitor uses. The comparison
-we care about most, though, is against a variance-weighted feature-space
-monitor that keeps our whole pipeline intact but replaces Fisher
-information with activation covariance, at identical calibration. That one
-baseline asks a single clean question: does weighting directions by the
-task beat weighting them by plain density, the way earlier methods did
-\cite{lee2018mahalanobis}? Calibration is held out throughout. We split
-the reference data deterministically, using one half to fix each
-monitor's geometry and the other, disjoint half to set its thresholds, so
-no threshold is ever calibrated on the same data that shaped the
-statistic it is gating.
+\cite{amoukou2024sequential} as the nearest prior framing, gets its proxy
+fit on the same labeled calibration data our own monitor uses. The
+comparison we care about most, though, is against a variance-weighted
+feature-space monitor that keeps our whole pipeline intact but swaps
+activation covariance in where we use Fisher information, at identical
+calibration. That one baseline asks a single clean question: does weighting
+directions by the task beat weighting them by plain density, the way
+earlier methods did \cite{lee2018mahalanobis}? Calibration is held-out
+throughout. We split the reference data deterministically, one half to fix
+each monitor's geometry and the other, disjoint, half to set its
+thresholds, so no threshold is ever calibrated on the same data that shaped
+the statistic it is gating.
 
-\paragraph{Metrics.} Synthetic corruptions tend to be obvious to every
-family of detector at once, so a threshold-free split of harmful from
-benign episodes (AUROC) can saturate and stop ranking anything. We report
-it anyway, for completeness. The metric we actually lead with on these
-benchmarks is \emph{how the monitor behaves on measured-benign episodes
-at matched calibration}, in other words its false-alarm discipline. The
-literature tends to underweight this, and it keeps separating methods
-well after the detection numbers have saturated. On top of both, we time
-things: the wall-clock cost of the offline fit and of the per-batch
-online step, compared against the cost of inference itself.
+\paragraph{Metrics.} Synthetic corruptions have a way of being obvious to
+every family of detector at the same time, so a threshold-free split of
+harmful from benign episodes (AUROC) can saturate and end up ranking
+nothing. We report it anyway, for completeness. The metric we actually lead
+with on these benchmarks is \emph{how the monitor behaves on
+measured-benign episodes at matched calibration}, its false-alarm
+discipline, in other words. The literature tends to underweight it, and it
+keeps telling methods apart well after the detection numbers have
+saturated. On top of both, we time things: the wall-clock cost of the
+offline fit and of the per-batch online step, set against the cost of
+inference itself.
 
 \subsection{Tools and Technology}
 
-We use PyTorch and torchvision for the models and the data. NumPy handles
-the linear algebra required by the monitor. We chose NumPy here so that
-the online step can run without using the GPU. River \cite{montiel2021river}
-runs the classical baselines. We use matplotlib for the figures and
-pytest for checking the implementation. The experiments run on a single
-workstation with a 24\,GB GPU, which is enough for the complete setup, so
-we do not need a compute cluster. We also keep the code and training logs
-under version control, and the scripts that generate the figures and
-tables are included in the repository.
+We are using PyTorch and torchvision for the models and data. NumPy is used
+for the linear algebra required by the monitor. We chose NumPy here because
+the online step can then run without using the GPU. River
+\cite{montiel2021river} is used to run the classical baselines. We use
+matplotlib for the figures and pytest for checking the implementation. The
+experiments are running on one workstation with a 24\,GB GPU. This is
+enough for the complete setup and we do not need a compute cluster. We also
+keep the code and training logs under version control. Scripts for
+generating the figures and tables are included in the repository as well.
 
 We used Claude (Anthropic) as a coding assistant during the project and
-for some editing of the paper. The main idea and hypothesis were our own.
-The theory, the design of the experiments, and the final interpretation
-of the results were also our own. We checked the scripts used to generate
-all the numbers and figures ourselves. For verification, the tests in
-Section~\ref{sec:synthetic} check our implementation against the analytic
-ground truth. They do not use anything produced by the coding assistant
-as the ground truth.
+also for some editing of the paper. The main idea and hypothesis were
+decided by us. The theory, how the experiments should be performed, and the
+final interpretation of the results were also done by us. We checked the
+scripts used for generating all the numbers and figures ourselves. For
+verification, the tests in Section~\ref{sec:synthetic} check our
+implementation using the analytic ground truth. They do not use the results
+generated by the coding assistant as the ground truth.
 
 \subsection{Feasibility and Constraints}
 
-The project can be completed in one semester by a team of two. All the
-data we use is publicly available, so there is no need for new data
-collection or annotation. The benchmark models take only a few minutes to
-train on our GPU. The monitor itself needs very little computation
-compared to model inference, so running all the experiments should take a
-few hours rather than weeks. The theory mainly requires basic linear
-algebra and probability, and the implementation uses PyTorch. A good part
-of the work is already complete. The theory and synthetic verification
-are done (Section~\ref{sec:synthetic}), and we have built the training and
-monitoring setup. The benchmark runs for both suites are also finished,
-including the output-baseline comparison. We used five seeds for each
-model and kept the calibration data separate during the experiments. What
-mainly remains is the WILDS stretch goal and the writing, which can be
-divided between the two team members.
+The project can be completed in one semester with a team of two. All the
+data we are using is publicly available, so there is no need for any new
+data collection or annotation. The models used for the benchmarks also take
+only a few minutes to train on our GPU. The monitor itself does not require
+much computation compared to the model inference, so running all the
+experiments should take a few hours and not weeks. The theory mainly
+requires basic linear algebra and probability, and PyTorch is used for the
+implementation. A good part of the work is already completed. The theory
+and synthetic verification are done (Section~\ref{sec:synthetic}), and we
+have also built the training and monitoring setup. The benchmark runs for
+both suites are completed as well, including the output-baseline
+comparison. We used five seeds for each model and kept the calibration data
+separate during the experiments. The work that is mainly left now is the
+WILDS stretch goal and writing the paper, which can be divided between the
+two team members.
 
 Four risks stand out, and each has a plan behind it. First, the theory
-might not carry over from the synthetic setting to real deep networks.
-The synthetic gate in Section~\ref{sec:synthetic} is there to catch this
-early, since every prediction is checked analytically before a single
-deep model is trained, and whichever way the transfer goes, we will
-report it honestly. Second, the benchmarks might saturate, with every
-detector doing well. If that happens, the primary metric we committed to
-in advance (false-alarm discipline at matched calibration) and the
-covariance baseline both keep drawing distinctions, and the WILDS stretch
-task adds a setting that is not synthetic at all. The finished runs
-actually confirmed this: threshold-free detection did saturate across the
-board, and the primary metric still separated FEATHER from its covariance
-ablation. It did so even when FEATHER's reference was calibrated on the
-deployment stream, in the same way as the output baselines, so the gap is
-not just an artifact of giving FEATHER a privileged reference (the
-measured numbers are in the full manuscript). Third, we might run short on
-compute; small models and checkpoint-resume throughout mean an
-interrupted run costs us minutes rather than days. Fourth, the writing
-could get squeezed at the end, but since the figures and tables are all
-script-generated, late results drop into the manuscript without anyone
-redoing them by hand.
+might not carry over from the synthetic setting to real deep networks. The
+synthetic gate in Section~\ref{sec:synthetic} is there to catch that early,
+since every prediction is checked analytically before a single deep model
+is trained, and whichever way the transfer goes, we will report it
+straight. Second, the benchmarks might saturate, with every detector doing
+well. If that happens, the primary metric we committed to in advance
+(false-alarm discipline at matched calibration) and the covariance baseline
+both keep drawing distinctions, and the WILDS stretch task brings in a
+setting that is not synthetic at all. The finished runs actually bore this
+out: threshold-free detection did saturate across the board, and the
+primary metric still pulled FEATHER apart from its covariance ablation, and
+it did so even when FEATHER's reference was calibrated on the deployment
+stream, the same way the output baselines are, so the gap is not just an
+artifact of handing FEATHER a privileged reference (the measured numbers
+are in the full manuscript). Third, we might run short on compute; small
+models and checkpoint-resume everywhere mean an interrupted run costs us
+minutes rather than days. Fourth, the writing could get squeezed at the
+end, but since the figures and tables are all script-generated, late
+results drop into the manuscript without anyone redoing them by hand.
 
 \section{Preliminary Results: Synthetic Validation}
 \label{sec:synthetic}
 
-Before touching a deep network, we test the hypothesis on a setup where
+Before touching a deep network, we put the hypothesis on a testbed where
 every quantity has a closed-form answer to check against: streams of
-two-dimensional, two-Gaussian data run through a frozen classifier whose
-ideal boundary we can write down analytically. On this testbed, the
-direction our analysis says should be output-invisible matches the
-analytic one to numerical precision, better than $1 - 10^{-6}$ in
-absolute cosine. The two experiments in Fig.~\ref{fig:synthetic-demo}
-test both cases shown in Fig.~\ref{fig:geometry-toy}. For the first case,
-we apply a drift of four standard deviations in the predicted invisible
-direction. Even after this, the change in the model outputs is less than
-$10^{-10}$ per sample. So the outputs essentially do not change, but our
-calibrated monitor still detects all fifteen batches after the drift
-starts. For the visible direction, we apply the same amount of drift, but
-here the monitor stays close to its normal noise level. This is expected,
-since this type of drift can already be detected by output-based methods.
-We also tested two hundred clean batches to check the false alarms, and
-the false-alarm rate stays within the calibrated budget. The complete
-suite currently has 69 tests. These cover the theory predictions, the
-monitor behavior, the held-out calibration, and the output baselines. The
-tests ship with the code and run in a few seconds on a normal laptop CPU,
-so the reported results can be checked again easily.
+two-dimensional, two-Gaussian data run at a frozen classifier whose ideal
+boundary we can write down analytically. On that testbed, the direction our
+analysis says should be output-invisible lines up with the analytic one to
+numerical precision, better than $1 - 10^{-6}$ in absolute cosine. The two
+experiments in Figure~\ref{fig:synthetic-demo} test both the cases shown in
+Figure~\ref{fig:geometry-toy}. For the first case, we apply a drift of four
+standard deviations in the predicted invisible direction. Even after this,
+the change in model outputs is less than $10^{-10}$ per sample. So
+basically the outputs do not change, but our calibrated monitor is still
+able to detect all fifteen batches after the drift starts. For the visible
+direction, we apply the same amount of drift, but here the monitor stays
+close to its normal noise level. This is expected since this type of drift
+can already be detected using output-based methods. We also tested two
+hundred clean batches to check the false alarms, and the false-alarm rate
+stays within the calibrated budget. Currently, there are 69 tests in the
+entire suite. These tests cover the theory predictions, monitor behavior,
+held-out calibration, and the output baselines. The tests are also included
+with the code and take only a few seconds to run on a normal laptop CPU, so
+the reported results can be checked again easily.
 
 \begin{figure*}[t]
 \centering
@@ -643,14 +649,14 @@ and leaves it to the output-based tools that can see it}
 \section{Discussion}
 \label{sec:outcomes}
 
-Beyond the concrete deliverables in Section~\ref{sec:project}, which
-include the characterization, the monitoring library, the benchmark
-study, and the full manuscript, another outcome we care about is being
-honest about the limitations. Wherever the benchmarks cannot tell methods
-apart, we intend to say so clearly and explain why. We also hope that two
-practices remain useful beyond this particular method: measuring the
-actual harm instead of assuming it, and evaluating false alarms alongside
-raw detection performance.
+Apart from the main deliverables in Section~\ref{sec:project}, that include
+the characterization, monitoring library, benchmark study, and the full
+manuscript, another outcome we care about is being clear about the
+limitations. Wherever the benchmarks are not able to differentiate between
+methods, we intend to clearly mention it and explain why. We also hope that
+two practices remain useful beyond this particular method: measuring the
+actual harm instead of assuming it, and evaluating false alarms along with
+the raw detection performance.
 
 Looking beyond this semester, two directions seem worth exploring. The
 first is the benchmarks. Corruption suites mostly provide shifts that
@@ -660,26 +666,26 @@ model's outputs, similar to the natural shifts collected in WILDS
 \cite{koh2021wilds}, could provide a better way to evaluate these methods.
 The second is the scope. The geometric approach could be extended beyond
 the classifier head to deeper layers, where Kronecker-factored
-approximations \cite{martens2015kfac} keep the computation manageable. It
-could also be extended to study representational drift in large language
-models \cite{pandey2025zdp}. Neither fits inside the current project, so
-we mark them as natural next steps.
+approximations \cite{martens2015kfac} can keep the computations manageable.
+It could also be extended to study representational drift in large language
+models \cite{pandey2025zdp}. Neither fits inside the current project; we
+mark them as the natural next steps.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-As things stand, label-free monitoring forces a choice between alarming
-at everything and trusting a witness with a documented history of
-unreliability. We have gone through the landscape and argued that what is
-missing from it is the geometry of the deployed model. FEATHER is our
-attempt to turn that one observation into three concrete things: a formal
-account of what output-based monitoring cannot see, a streaming monitor
-light enough to run in practice and built on the model's Fisher
-information, and an evaluation that takes both the harmful-versus-benign
-split and false-alarm discipline seriously. The construction, the
-guarantees, and the measured results are for the full manuscript. The
-problem, the gap, the plan, and the case that all of it is feasible are
-what we have tried to set down here.
+As things stand, label-free monitoring makes you pick between alarming at
+everything and trusting a witness with a documented history of
+unreliability. We have gone through the landscape and made the case that
+what is missing from it is the geometry of the deployed model. FEATHER is
+our attempt to turn that one observation into three concrete things: a
+formal account of what output-based monitoring simply cannot see, a
+streaming monitor light enough to run in practice and built on the model's
+Fisher information, and an evaluation that takes both the
+harmful-versus-benign split and false-alarm discipline seriously. The
+construction, the guarantees, and the measured results are for the full
+manuscript. The problem, the gap, the plan, and the case that all of it is
+feasible are what we have tried to set down here.
 
 \begin{acks}
 % Keep anonymized during double-blind review; fill for the camera-ready.
