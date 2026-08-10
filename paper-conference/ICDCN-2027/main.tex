@@ -4,7 +4,11 @@
 % disclosing the method's construction, theory, or deep-network results.
 % The complete manuscript lives in ../../paper/ and stays untouched.
 %
-% Format: ACM acmart (sigconf, authordraft) per ICDCN 2027 CFP.
+% Format: ACM acmart, sigconf per ICDCN 2027 CFP. The CFP's template uses
+% the [authordraft] option, which stamps per-line numbers and an
+% "Unpublished working draft" watermark on every page; those are review
+% aids, not content. Dropped here for a clean PDF. Re-add authordraft (or
+% [review,anonymous]) if reviewers ask for line numbers.
 % Compile with pdfLaTeX + BibTeX:
 %   main.tex + references.bib + figures/ + acmart.cls + ACM-Reference-Format.bst
 % acmart.cls and ACM-Reference-Format.bst come from acmart-primary.zip
@@ -18,7 +22,7 @@
 % source (missing spaces, doubled punctuation, a couple of typos) are
 % cleaned up here without changing wording.
 
-\documentclass[sigconf,authordraft]{acmart}
+\documentclass[sigconf]{acmart}
 
 % --- ICDCN 2027 submission metadata (finalize DOI/ISBN at camera-ready) ---
 \acmConference[ICDCN 2027]{28th International Conference on Distributed
