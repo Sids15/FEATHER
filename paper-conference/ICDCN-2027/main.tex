@@ -205,8 +205,7 @@ with the geometric family this paper belongs to.
 
 \begin{table*}[t]
 \caption{Existing work: deployed-model monitoring families, grouped by the
-signal each one watches. The first three are the established families; the
-last row is the geometric approach this paper develops.}
+signal each one watches.}
 \label{tab:families}
 \small
 \begin{tabularx}{\textwidth}{@{}p{2.9cm} p{4.6cm} c X@{}}
@@ -216,7 +215,6 @@ Family & Representative methods & Labels online & Monitored signal and main limi
 Error-rate charts & DDM \cite{gama2004learning}, EDDM \cite{baena2006eddm}, ADWIN \cite{bifet2007adwin} & yes & online classification error; needs the labels the stream does not give \\
 Input-distribution tests & MMD \cite{gretton2012kernel}, KSWIN \cite{raab2020kswin}, BBSD \cite{rabanser2019failing} & no & two-sample feature test; performance-agnostic, alarms on benign shift \\
 Output-based estimators & MSP \cite{hendrycks2017baseline}, DoC \cite{guillory2021doc}, ATC \cite{garg2022atc}, PUDD \cite{pudd2025}, error proxies \cite{amoukou2024sequential} & no & softmax confidence/entropy; miscalibrated under shift \cite{ovadia2019trust}, blind to null-space drift \\
-Geometric (FEATHER, this paper) & FEATHER, score charts \cite{zhang2023score}, ZDP \cite{pandey2025zdp}, activation probes \cite{komorniczak2024parallel} & no & Fisher-weighted feature geometry; label-free, harm-oriented, calibrated \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -284,8 +282,8 @@ feature direction the same, so they go off on benign covariate shift. Output
 confidence drifts out of calibration under shift, and it is blind by
 construction to anything the outputs do not move. And the geometric methods
 that do look inside the model have not paired that view with cheap, calibrated
-false-alarm control for a zero-label stream. Those gaps are what our three
-questions target:
+false-alarm control for a zero-label stream. The gaps identified above frame
+our three questions:
 
 \begin{enumerate}
 \item Of all the feature-space shifts a model can undergo, which ones can no
@@ -771,7 +769,7 @@ the outputs, similar in spirit to the natural shifts in WILDS
 \section{Feasibility and Constraints}
 \label{sec:feasibility}
 
-Two people can finish this in a semester. Every dataset is public, so nothing
+Every dataset is public, so nothing
 has to be collected or labelled. The benchmark models train in minutes on a
 single 24\,GB GPU, and the monitor itself is cheap enough that the full set of
 runs takes hours, not weeks. The stack is PyTorch and torchvision for models
