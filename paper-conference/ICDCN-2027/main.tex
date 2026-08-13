@@ -359,7 +359,11 @@ invisible set is a subspace whose dimension we can bound exactly.
 A trained classifier does not use its feature space evenly: some directions
 carry the information its decisions turn on, and others carry none. We read
 that split off the model's Fisher information, a classical object from
-information geometry \cite{amari1998natural}. On a finite reference set
+information geometry \cite{amari1998natural}. It is the same quantity that
+concentrates in a few directions of a deep network's spectrum
+\cite{karakida2019universal} and that tells continual-learning methods which
+weights are too important to overwrite \cite{kirkpatrick2017overcoming}. On a
+finite reference set
 $\{(x_i,y_i)\}_{i=1}^n$ we use the empirical, label-conditioned form
 \begin{equation}
 \mathbf{F} = \frac{1}{n}\sum_{i=1}^{n} g_i g_i^{\top}, \qquad
