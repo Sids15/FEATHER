@@ -297,11 +297,7 @@ Section~\ref{sec:setup} describes the experimental setup and baselines,
 Section~\ref{sec:results} reports the synthetic validation,
 Section~\ref{sec:outcomes} discusses implications and next steps,
 Section~\ref{sec:feasibility} covers feasibility and constraints, and
-Section~\ref{sec:conclusion} concludes with limitations. The appendices give
-the full proofs (Appendix~\ref{app:proofs}), extended related work
-(Appendix~\ref{app:related}), the detailed experimental protocol
-(Appendix~\ref{app:setup}), and the deployment design
-(Appendix~\ref{app:deploy}).
+Section~\ref{sec:conclusion} concludes with limitations.
 
 \section{Methods}
 \label{sec:methods}
@@ -422,7 +418,7 @@ Proposition~\ref{prop:blind} shows an output monitor is blind once inside it.
 Of the two, we keep the blindness proof here, since that is the claim an
 operator would otherwise have to take on faith; the full rank-bound proof, the
 corollary on how large the blind subspace gets, and the false-alarm analysis
-are collected in Appendix~\ref{app:proofs}.
+follow below.
 
 \begin{theorem}[Fisher rank bound]
 \label{thm:rank}
@@ -440,6 +436,40 @@ vectors, so its rank cannot exceed $C-1$; the null-space bound then follows by
 rank--nullity. The practical consequence is that whenever the feature space is
 wider than the number of classes, which is the usual case, a large
 output-invisible subspace is guaranteed to exist.
+
+Fix a reference sample $(x_i, y_i)$ and write the logits as
+$z = W\phi(x_i)+b$. The log-likelihood of the true class is
+$\log p(y_i\mid x_i) = z_{y_i} - \log\sum_{k=1}^{C} e^{z_k}$, so its gradient
+with respect to the features is
+\begin{align}
+g_i &= \nabla_{\phi}\log p(y_i\mid x_i)
+   = W_{y_i,:}^{\top} - \sum_{k=1}^{C} p_k(x_i)\,W_{k,:}^{\top} \nonumber\\
+   &= W^{\top}\bigl(e_{y_i}-p(x_i)\bigr).
+\end{align}
+The residual $r_i = e_{y_i}-p(x_i)$ satisfies
+$\mathbf{1}^{\top} r_i = 1-1 = 0$, so each $r_i$ lies in the zero-sum
+hyperplane $\mathcal{S}_C = \{u\in\mathbb{R}^{C} : \mathbf{1}^{\top} u = 0\}$,
+which has dimension $C-1$. Hence every score $g_i = W^{\top} r_i$ lies in
+$W^{\top}\mathcal{S}_C$, a subspace of $\mathbb{R}^d$ of dimension at most
+$C-1$, and so does their span. Because $\mathbf{F} = \frac1n\sum_i g_i
+g_i^{\top}$ is an average of outer products of the $g_i$, its image is
+contained in $\operatorname{span}\{g_i\}$, so $\operatorname{rank}(\mathbf{F})
+\le C-1$. Rank--nullity in $\mathbb{R}^d$ then gives
+\begin{equation}
+\dim\ker(\mathbf{F}) = d - \operatorname{rank}(\mathbf{F}) \ge d - C + 1.
+\qquad\square
+\end{equation}
+
+\begin{corollary}
+\label{cor:fraction}
+Under Theorem~\ref{thm:rank}, the output-invisible fraction of feature space
+satisfies $\dim\ker(\mathbf{F})/d \ge 1 - (C-1)/d$.
+\end{corollary}
+
+Dividing $\dim\ker(\mathbf{F}) \ge d - C + 1$ by $d > 0$ gives the statement.
+When $d \gg C$ almost the entire feature space is output-invisible, so the
+blind spot of the output family is large. When $C$ approaches $d$ the fraction
+shrinks, which is the structural limit noted in Section~\ref{sec:conclusion}.
 
 \begin{proposition}[Output blindness in $\ker(\mathbf{F})$]
 \label{prop:blind}
@@ -468,7 +498,7 @@ $\ker(\mathbf{F})$ at any magnitude, while a monitor that projects onto
 $V_{\text{blind}}$ can.
 
 The thresholds also come with a calibration guarantee.
-Proposition~\ref{prop:fa}, proved in Appendix~\ref{app:proofs}, bounds the
+Proposition~\ref{prop:fa}, proved just below, bounds the
 steady-state false-alarm rate under i.i.d.\ reference sampling, so the
 operator's chosen budget is respected up to a vanishing finite-sample
 correction.
@@ -480,6 +510,20 @@ the $(1-\alpha)$-quantile bootstrap thresholds. Under the null hypothesis of
 no harmful drift, the per-batch false-alarm rate is at most
 $\alpha + \mathcal{O}(n^{-1/2})$.
 \end{proposition}
+
+The thresholds $\tau_m,\tau_v$ are empirical $(1-\alpha)$-quantiles of the
+bootstrap distributions of the batch statistics $m$ and $v$ over clean
+reference batches. Under the null of no harmful drift, a streaming batch is
+distributed like a reference batch, so its statistics are draws from the same
+distribution whose quantile set the threshold. By the
+Dvoretzky--Kiefer--Wolfowitz inequality, the empirical distribution function
+of $n$ i.i.d.\ samples is uniformly within $\mathcal{O}(n^{-1/2})$ of the true
+one with high probability, so the empirical $(1-\alpha)$-quantile converges to
+the true quantile at the same rate. The probability that a null batch exceeds
+its threshold is therefore at most $\alpha + \mathcal{O}(n^{-1/2})$. This is an
+asymptotic statement about the steady-state false-alarm rate up to the
+bootstrap's finite-sample error; it makes no claim about detection power,
+which we measure empirically.\hfill$\square$
 
 \paragraph{Streaming algorithm.}
 FEATHER splits into an offline phase that runs once and an online phase that
@@ -546,7 +590,7 @@ threshold check, on CPU, with no GPU and no labels.}
 The offline phase costs one Fisher build and one eigendecomposition, both
 one-time. The online projection is linear in the batch size and the blind
 dimension, which is why it fits inside a serving loop as a sidecar rather than
-on the request path. Appendix~\ref{app:deploy} gives the cost analysis and the
+on the request path. Section~\ref{sec:deploy} gives the cost analysis and the
 sidecar architecture; measured timings are in the full manuscript.
 
 \section{Experimental Setup}
@@ -606,6 +650,41 @@ benchmarks it saturates, so we lead with false-alarm behavior on
 measured-benign episodes at matched calibration, which keeps telling methods
 apart after detection has saturated. We also report post-onset detection delay
 and per-batch wall-clock cost against the cost of inference itself.
+
+\subsection{Distributed serving pipeline}
+\label{sec:deploy}
+
+This section describes how FEATHER is meant to sit in a serving system. It is
+a design, not a measured system; we have not benchmarked the sidecar at
+cluster scale, and report single-machine timings only in the full manuscript.
+
+\paragraph{Two phases.}
+The offline phase runs once, on a GPU. It builds the Fisher matrix and its
+eigendecomposition on the geometry split, and sets the reference mean and
+bootstrap thresholds on the disjoint calibration split. Its cost is
+$\mathcal{O}(n d^2 + d^3)$ for the Fisher build and the eigendecomposition,
+with $\mathcal{O}(d^2)$ memory for the matrix. The online phase runs per
+batch, on a CPU. It projects the batch's penultimate activations onto the
+frozen blind basis and thresholds the resulting statistics, at
+$\mathcal{O}(b\, d\, d_{\text{blind}})$ per batch of size $b$.
+
+\paragraph{Sidecar pattern.}
+Because the blind basis is fixed after calibration, online monitoring needs
+none of the model's gradients or labels and touches none of its weights. A
+serving worker can intercept the penultimate activations it already computes,
+hand them to a separate monitoring process, and continue answering the
+request without waiting on the monitor. The projection runs on a CPU thread
+with a bounded queue, so a burst of traffic delays monitoring rather than
+inference, and the monitor consumes no GPU memory.
+
+\paragraph{Distributed serving.}
+In a multi-worker or edge deployment the same design scales by fan-in: each
+inference worker streams its activation projections to a shared monitoring
+process that aggregates statistics across workers, with no cross-worker
+coordination on the request path. Inference stays spread across the workers,
+while the monitoring collapses into one cheap, central place. Whether the
+design holds up at scale, and what it costs under real serving traffic, is
+something we leave for future work.
 
 \section{Results}
 \label{sec:results}
@@ -720,205 +799,5 @@ test the idea live in the full manuscript, not here.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
-
-\appendix
-
-\section{Proofs}
-\label{app:proofs}
-
-This appendix gives the two results the main text states without full proof,
-plus the corollary that quantifies the blind-subspace fraction.
-
-\subsection{Fisher rank bound (Theorem~\ref{thm:rank})}
-
-Fix a reference sample $(x_i, y_i)$ and write the logits as
-$z = W\phi(x_i)+b$. The log-likelihood of the true class is
-$\log p(y_i\mid x_i) = z_{y_i} - \log\sum_{k=1}^{C} e^{z_k}$, so its gradient
-with respect to the features is
-\begin{align}
-g_i &= \nabla_{\phi}\log p(y_i\mid x_i)
-   = W_{y_i,:}^{\top} - \sum_{k=1}^{C} p_k(x_i)\,W_{k,:}^{\top} \nonumber\\
-   &= W^{\top}\bigl(e_{y_i}-p(x_i)\bigr).
-\end{align}
-The residual $r_i = e_{y_i}-p(x_i)$ satisfies
-$\mathbf{1}^{\top} r_i = 1-1 = 0$, so each $r_i$ lies in the zero-sum
-hyperplane $\mathcal{S}_C = \{u\in\mathbb{R}^{C} : \mathbf{1}^{\top} u = 0\}$,
-which has dimension $C-1$. Hence every score $g_i = W^{\top} r_i$ lies in
-$W^{\top}\mathcal{S}_C$, a subspace of $\mathbb{R}^d$ of dimension at most
-$C-1$, and so does their span. Because $\mathbf{F} = \frac1n\sum_i g_i
-g_i^{\top}$ is an average of outer products of the $g_i$, its image is
-contained in $\operatorname{span}\{g_i\}$, so $\operatorname{rank}(\mathbf{F})
-\le C-1$. Rank--nullity in $\mathbb{R}^d$ then gives
-\begin{equation}
-\dim\ker(\mathbf{F}) = d - \operatorname{rank}(\mathbf{F}) \ge d - C + 1.
-\qquad\square
-\end{equation}
-
-\subsection{Blind-subspace fraction}
-
-\begin{corollary}
-\label{cor:fraction}
-Under Theorem~\ref{thm:rank}, the output-invisible fraction of feature space
-satisfies $\dim\ker(\mathbf{F})/d \ge 1 - (C-1)/d$.
-\end{corollary}
-
-Dividing $\dim\ker(\mathbf{F}) \ge d - C + 1$ by $d > 0$ gives the statement.
-When $d \gg C$ almost the entire feature space is output-invisible, so the
-blind spot of the output family is large. When $C$ approaches $d$ the fraction
-shrinks, which is the structural limit noted in Section~\ref{sec:conclusion}.
-
-\subsection{False-alarm control (Proposition~\ref{prop:fa})}
-
-The thresholds $\tau_m,\tau_v$ are empirical $(1-\alpha)$-quantiles of the
-bootstrap distributions of the batch statistics $m$ and $v$ over clean
-reference batches. Under the null of no harmful drift, a streaming batch is
-distributed like a reference batch, so its statistics are draws from the same
-distribution whose quantile set the threshold. By the
-Dvoretzky--Kiefer--Wolfowitz inequality, the empirical distribution function
-of $n$ i.i.d.\ samples is uniformly within $\mathcal{O}(n^{-1/2})$ of the true
-one with high probability, so the empirical $(1-\alpha)$-quantile converges to
-the true quantile at the same rate. The probability that a null batch exceeds
-its threshold is therefore at most $\alpha + \mathcal{O}(n^{-1/2})$. This is an
-asymptotic statement about the steady-state false-alarm rate up to the
-bootstrap's finite-sample error; it makes no claim about detection power,
-which we measure empirically.\hfill$\square$
-
-\section{Extended Related Work}
-\label{app:related}
-
-This appendix expands Section~\ref{sec:survey} with more detail on each family
-and where FEATHER sits relative to it.
-
-\paragraph{Error-rate detectors.}
-This line starts from statistical process control \cite{page1954cusum} and
-grows into detectors built for streams. DDM compares the running error rate to
-its own historical minimum, warning first and then alarming as the gap widens
-\cite{gama2004learning}. EDDM looks instead at the spacing between successive
-errors, which helps it catch drift that comes on slowly \cite{baena2006eddm}.
-ADWIN holds a window that grows and shrinks; once a test says its two halves no
-longer agree, it discards the older half, and its bounds come from Hoeffding
-arguments \cite{bifet2007adwin}. What all three really give us is the best a
-monitor could do if labels were free---which, in a stream, they are not. We
-treat them as that upper bound, using River's implementations
-\cite{montiel2021river}.
-
-\paragraph{Input-distribution tests.}
-Take a batch $\mathcal{B}_t$ and a reference set, measure a distance between
-them, and threshold it---that is the whole recipe. Only the distance changes:
-MMD compares embeddings through a characteristic kernel \cite{gretton2012kernel},
-KSWIN runs a windowed Kolmogorov--Smirnov test feature by feature
-\cite{raab2020kswin}, black-box shift detection applies the test to the model's
-soft predictions or representations \cite{rabanser2019failing}, and label shift
-gets its own estimators \cite{lipton2018label}. None of them consult the
-decision boundary, so none can tell a boundary-parallel benign shift from a
-boundary-crossing harmful one. That gap is where the alert fatigue
-\cite{rabanser2019failing} comes from, and it is exactly what FEATHER sets out
-to avoid.
-
-\paragraph{Output-based estimators.}
-Everything here reads the softmax. MSP takes the top probability as a
-correctness signal \cite{hendrycks2017baseline}; DoC watches the gap between
-today's confidence and the reference accuracy \cite{guillory2021doc}; ATC fits
-a confidence threshold whose exceedance rate estimates accuracy
-\cite{garg2022atc}; PUDD follows an uncertainty index that can turn before the
-error rate does \cite{pudd2025}; and sequential error proxies go after harmful
-shift head-on \cite{amoukou2024sequential}. Two problems run through all of
-them: deep networks are badly calibrated and only get worse under shift
-\cite{guo2017calibration, ovadia2019trust}, and then there is the structural
-blindness of Proposition~\ref{prop:blind}. FEATHER is no rival to these. It
-takes the blind region and leaves the output-visible drift to them.
-
-\paragraph{Geometric and activation-space methods.}
-Monitoring in representation space already takes several forms:
-class-conditional Mahalanobis scoring \cite{lee2018mahalanobis}, score-vector
-control charts \cite{zhang2023score}, null-direction probing of language-model
-representations \cite{pandey2025zdp}, and label-free activation monitors
-\cite{komorniczak2024parallel}. FEATHER lives in the same space, and the
-weighting is where it parts from them. It ranks directions by task sensitivity,
-through the Fisher matrix, rather than by variance or density---that is what
-makes it harm-oriented---and it brings the calibrated false-alarm control the
-others leave out.
-
-\section{Experimental Protocol in Detail}
-\label{app:setup}
-
-This appendix records the exact settings behind Section~\ref{sec:setup} and
-Section~\ref{sec:results}, so the runs can be reproduced.
-
-\paragraph{Synthetic testbed.}
-Two Gaussian classes, with means $\mu_0=(-1.5,0)$ and $\mu_1=(1.5,0)$, share a
-covariance $\Sigma=\operatorname{diag}(1.0,0.25)$. Equal priors then place the
-Bayes-optimal boundary on a straight line through the midpoint, with normal
-$w=(3,0)$. That fixes the two directions we care about: the normal $(1,0)$ is
-output-visible, and the parallel $(0,1)$ is output-invisible. A stream is 30
-batches of 500 samples, and drift arrives at batch 15---$4\sigma$ along the
-invisible direction in one run, $3\sigma$ along the visible one in the other.
-Thresholds are taken at the 99th percentile from 300 bootstrap reference
-batches, and 200 stationary batches serve as the clean-behavior check.
-
-\paragraph{Harm labeling.}
-Harm is measured, never assumed. Each episode is scored by the accuracy the
-deployed model loses on held-out labels relative to the clean episode. In the
-benchmark protocol an episode is benign below a 2-point drop and harmful above
-a 10-point drop; the gray band between is dropped from detection scoring so a
-borderline episode is never forced onto one side.
-
-\paragraph{Metrics.}
-We report AUROC for the harmful-versus-benign split with a rank-based
-(Mann--Whitney) statistic; the false-alarm rate on measured-benign episodes at
-matched calibration, which is the metric we lead with because it keeps
-separating methods after AUROC saturates; the post-onset detection delay in
-batches; and per-batch wall-clock cost against inference cost.
-
-\paragraph{Baselines.}
-The label-having upper bound is a River \cite{montiel2021river} error-rate
-detector. The label-free output comparison is confidence- and entropy-based
-statistics \cite{hendrycks2017baseline, garg2022atc}. The key ablation keeps
-the entire FEATHER pipeline but replaces the Fisher matrix with activation
-covariance at identical calibration, isolating the effect of task-weighting
-versus density-weighting \cite{lee2018mahalanobis}.
-
-\paragraph{Benchmarks.}
-Beyond the synthetic testbed, the evaluation uses Rotated MNIST and CIFAR-10-C
-\cite{hendrycks2019benchmarking} (19 corruptions $\times$ 5 severities, plus
-clean), with models trained on clean data over several seeds so run-to-run
-variation is reported. A natural WILDS shift \cite{koh2021wilds}, most likely
-Camelyon17, is a stretch goal. Deep-benchmark numbers appear in the full
-manuscript.
-
-\section{Deployment as a Distributed Sidecar}
-\label{app:deploy}
-
-This appendix describes how FEATHER is meant to sit in a serving system. It is
-a design, not a measured system; we have not benchmarked the sidecar at
-cluster scale, and report single-machine timings only in the full manuscript.
-
-\paragraph{Two phases.}
-The offline phase runs once, on a GPU. It builds the Fisher matrix and its
-eigendecomposition on the geometry split, and sets the reference mean and
-bootstrap thresholds on the disjoint calibration split. Its cost is
-$\mathcal{O}(n d^2 + d^3)$ for the Fisher build and the eigendecomposition,
-with $\mathcal{O}(d^2)$ memory for the matrix. The online phase runs per
-batch, on a CPU. It projects the batch's penultimate activations onto the
-frozen blind basis and thresholds the resulting statistics, at
-$\mathcal{O}(b\, d\, d_{\text{blind}})$ per batch of size $b$.
-
-\paragraph{Sidecar pattern.}
-Because the blind basis is fixed after calibration, online monitoring needs
-none of the model's gradients or labels and touches none of its weights. A
-serving worker can intercept the penultimate activations it already computes,
-hand them to a separate monitoring process, and continue answering the
-request without waiting on the monitor. The projection runs on a CPU thread
-with a bounded queue, so a burst of traffic delays monitoring rather than
-inference, and the monitor consumes no GPU memory.
-
-\paragraph{Distributed serving.}
-In a multi-worker or edge deployment the same design scales by fan-in: each
-inference worker streams its activation projections to a shared monitoring
-process that aggregates statistics across workers, with no cross-worker
-coordination on the request path. Inference stays spread across the workers,
-while the monitoring collapses into one cheap, central place. Whether the
-design holds up at scale, and what it costs under real serving traffic, is
-something we leave for future work.
 
 \end{document}
