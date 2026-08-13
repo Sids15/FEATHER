@@ -447,6 +447,7 @@ rank--nullity. The practical consequence is that whenever the feature space is
 wider than the number of classes, which is the usual case, a large
 output-invisible subspace is guaranteed to exist.
 
+\begin{proof}
 Fix a reference sample $(x_i, y_i)$ and write the logits as
 $z = W\phi(x_i)+b$. The log-likelihood of the true class is
 $\log p(y_i\mid x_i) = z_{y_i} - \log\sum_{k=1}^{C} e^{z_k}$, so its gradient
@@ -467,8 +468,8 @@ contained in $\operatorname{span}\{g_i\}$, so $\operatorname{rank}(\mathbf{F})
 \le C-1$. Rank--nullity in $\mathbb{R}^d$ then gives
 \begin{equation}
 \dim\ker(\mathbf{F}) = d - \operatorname{rank}(\mathbf{F}) \ge d - C + 1.
-\qquad\square
 \end{equation}
+\end{proof}
 
 \begin{corollary}
 \label{cor:fraction}
@@ -476,7 +477,10 @@ Under Theorem~\ref{thm:rank}, the output-invisible fraction of feature space
 satisfies $\dim\ker(\mathbf{F})/d \ge 1 - (C-1)/d$.
 \end{corollary}
 
+\begin{proof}
 Dividing $\dim\ker(\mathbf{F}) \ge d - C + 1$ by $d > 0$ gives the statement.
+\end{proof}
+
 When $d \gg C$ almost the entire feature space is output-invisible, so the
 blind spot of the output family is large. When $C$ approaches $d$ the fraction
 shrinks, which is the structural limit noted in Section~\ref{sec:conclusion}.
@@ -521,6 +525,7 @@ no harmful drift, the per-batch false-alarm rate is at most
 $\alpha + \mathcal{O}(n^{-1/2})$.
 \end{proposition}
 
+\begin{proof}
 The thresholds $\tau_m,\tau_v$ are empirical $(1-\alpha)$-quantiles of the
 bootstrap distributions of the batch statistics $m$ and $v$ over clean
 reference batches. Under the null of no harmful drift, a streaming batch is
@@ -533,7 +538,8 @@ the true quantile at the same rate. The probability that a null batch exceeds
 its threshold is therefore at most $\alpha + \mathcal{O}(n^{-1/2})$. This is an
 asymptotic statement about the steady-state false-alarm rate up to the
 bootstrap's finite-sample error; it makes no claim about detection power,
-which we measure empirically.\hfill$\square$
+which we measure empirically.
+\end{proof}
 
 \paragraph{Streaming algorithm.}
 FEATHER splits into an offline phase that runs once and an online phase that
