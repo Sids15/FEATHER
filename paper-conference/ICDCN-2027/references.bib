@@ -1,260 +1,235 @@
-% Verified references for FEATHER (see research/online-research-findings.md).
-% All previously TODO-flagged author lists (zhang2023score, pudd2025,
-% montiel2021river) verified against the publisher pages on 2026-07-16.
+% FEATHER references — finalized list (matches "References final.txt").
+% Keys are the ones used by main.tex; details are the corrected/final ones.
 
-% ---------- drift detection in streams ----------
-
-@article{page1954cusum,
-  title   = {Continuous Inspection Schemes},
-  author  = {Page, E. S.},
-  journal = {Biometrika},
-  volume  = {41},
-  number  = {1/2},
-  pages   = {100--115},
-  year    = {1954}
-}
-
-@inproceedings{gama2004learning,
-  title     = {Learning with Drift Detection},
-  author    = {Gama, Jo{\~a}o and Medas, Pedro and Castillo, Gladys and Rodrigues, Pedro},
-  booktitle = {Brazilian Symposium on Artificial Intelligence (SBIA)},
-  year      = {2004}
-}
-
-@inproceedings{baena2006eddm,
-  title     = {Early Drift Detection Method},
-  author    = {Baena-Garc{\'\i}a, Manuel and del Campo-{\'A}vila, Jos{\'e} and Fidalgo, Ra{\'u}l and Bifet, Albert and Gavald{\`a}, Ricard and Morales-Bueno, Rafael},
-  booktitle = {Fourth International Workshop on Knowledge Discovery from Data Streams (ECML PKDD)},
-  year      = {2006}
-}
-
-@inproceedings{bifet2007adwin,
-  title     = {Learning from Time-Changing Data with Adaptive Windowing},
-  author    = {Bifet, Albert and Gavald{\`a}, Ricard},
-  booktitle = {Proceedings of the 2007 SIAM International Conference on Data Mining (SDM)},
-  year      = {2007}
-}
-
-@article{gama2014survey,
-  title   = {A Survey on Concept Drift Adaptation},
-  author  = {Gama, Jo{\~a}o and {\v{Z}}liobait{\.e}, Indr{\.e} and Bifet, Albert and Pechenizkiy, Mykola and Bouchachia, Abdelhamid},
-  journal = {ACM Computing Surveys},
-  volume  = {46},
-  number  = {4},
-  year    = {2014}
-}
-
-@article{lu2018learning,
-  title   = {Learning under Concept Drift: A Review},
-  author  = {Lu, Jie and Liu, Anjin and Dong, Fan and Gu, Feng and Gama, Jo{\~a}o and Zhang, Guangquan},
-  journal = {IEEE Transactions on Knowledge and Data Engineering},
-  volume  = {31},
-  number  = {12},
-  year    = {2019}
-}
-
-@article{raab2020kswin,
-  title   = {Reactive Soft Prototype Computing for Concept Drift Streams},
-  author  = {Raab, Christoph and Heusinger, Moritz and Schleif, Frank-Michael},
-  journal = {Neurocomputing},
-  volume  = {416},
-  pages   = {340--351},
-  year    = {2020}
-}
-
-@article{montiel2021river,
-  title   = {River: Machine Learning for Streaming Data in {P}ython},
-  author  = {Montiel, Jacob and Halford, Max and Mastelini, Saulo Martiello and Bolmier, Geoffrey and Sourty, Rapha{\"e}l and Vaysse, Robin and Zouitine, Adil and Gomes, Heitor Murilo and Read, Jesse and Abdessalem, Talel and Bifet, Albert},
-  journal = {Journal of Machine Learning Research},
-  volume  = {22},
-  number  = {110},
-  pages   = {1--8},
-  year    = {2021}
-}
-
-% ---------- dataset shift and two-sample testing ----------
-
-@book{quinonero2009dataset,
-  title     = {Dataset Shift in Machine Learning},
-  editor    = {Qui{\~n}onero-Candela, Joaquin and Sugiyama, Masashi and Schwaighofer, Anton and Lawrence, Neil D.},
-  publisher = {MIT Press},
-  year      = {2009}
-}
-
-@article{gretton2012kernel,
-  title   = {A Kernel Two-Sample Test},
-  author  = {Gretton, Arthur and Borgwardt, Karsten M. and Rasch, Malte J. and Sch{\"o}lkopf, Bernhard and Smola, Alexander},
-  journal = {Journal of Machine Learning Research},
-  volume  = {13},
-  year    = {2012}
-}
-
-@inproceedings{lipton2018label,
-  title     = {Detecting and Correcting for Label Shift with Black Box Predictors},
-  author    = {Lipton, Zachary C. and Wang, Yu-Xiang and Smola, Alexander},
-  booktitle = {International Conference on Machine Learning (ICML)},
-  year      = {2018}
-}
-
-@inproceedings{rabanser2019failing,
-  title     = {Failing Loudly: An Empirical Study of Methods for Detecting Dataset Shift},
-  author    = {Rabanser, Stephan and G{\"u}nnemann, Stephan and Lipton, Zachary C.},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2019}
-}
-
-@inproceedings{hendrycks2019benchmarking,
-  title     = {Benchmarking Neural Network Robustness to Common Corruptions and Perturbations},
-  author    = {Hendrycks, Dan and Dietterich, Thomas},
-  booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2019}
-}
-
-@inproceedings{koh2021wilds,
-  title     = {{WILDS}: A Benchmark of in-the-Wild Distribution Shifts},
-  author    = {Koh, Pang Wei and Sagawa, Shiori and Marklund, Henrik and Xie, Sang Michael and Zhang, Marvin and Balsubramani, Akshay and Hu, Weihua and Yasunaga, Michihiro and others},
-  booktitle = {International Conference on Machine Learning (ICML)},
-  year      = {2021}
-}
-
-% ---------- uncertainty, confidence, and label-free estimation ----------
-
-@inproceedings{hendrycks2017baseline,
-  title     = {A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks},
-  author    = {Hendrycks, Dan and Gimpel, Kevin},
-  booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2017}
-}
-
-@inproceedings{guo2017calibration,
-  title     = {On Calibration of Modern Neural Networks},
-  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
-  booktitle = {International Conference on Machine Learning (ICML)},
-  year      = {2017}
-}
-
-@inproceedings{lee2018mahalanobis,
-  title     = {A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks},
-  author    = {Lee, Kimin and Lee, Kibok and Lee, Honglak and Shin, Jinwoo},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2018}
-}
-
-@inproceedings{ovadia2019trust,
-  title     = {Can You Trust Your Model's Uncertainty? {E}valuating Predictive Uncertainty under Dataset Shift},
-  author    = {Ovadia, Yaniv and Fertig, Emily and Ren, Jie and Nado, Zachary and Sculley, D. and Nowozin, Sebastian and Dillon, Joshua V. and Lakshminarayanan, Balaji and Snoek, Jasper},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2019}
-}
-
-@inproceedings{guillory2021doc,
-  title     = {Predicting with Confidence on Unseen Distributions},
-  author    = {Guillory, Devin and Shankar, Vaishaal and Ebrahimi, Sayna and Darrell, Trevor and Schmidt, Ludwig},
-  booktitle = {International Conference on Computer Vision (ICCV)},
-  year      = {2021}
-}
-
-@inproceedings{garg2022atc,
-  title     = {Leveraging Unlabeled Data to Predict Out-of-Distribution Performance},
-  author    = {Garg, Saurabh and Balakrishnan, Sivaraman and Lipton, Zachary C. and Neyshabur, Behnam and Sedghi, Hanie},
-  booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2022}
+@article{amari1998natural,
+  author  = {Amari, Shun-ichi},
+  title   = {Natural Gradient Works Efficiently in Learning},
+  journal = {Neural Computation},
+  volume  = {10}, number = {2}, pages = {251--276}, year = {1998},
+  doi     = {10.1162/089976698300017746}
 }
 
 @inproceedings{amoukou2024sequential,
-  title     = {Sequential Harmful Shift Detection Without Labels},
   author    = {Amoukou, Salim I. and Bewley, Tom and Mishra, Saumitra and Lecue, Freddy and Magazzeni, Daniele and Veloso, Manuela},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2024}
+  title     = {Sequential Harmful Shift Detection Without Labels},
+  booktitle = {Advances in Neural Information Processing Systems 37 (NeurIPS 2024)},
+  pages     = {129279--129302}, year = {2024},
+  doi       = {10.52202/079017-4107}
 }
 
-@inproceedings{pudd2025,
-  title     = {Early Concept Drift Detection via Prediction Uncertainty},
-  author    = {Lu, Pengqian and Lu, Jie and Liu, Anjin and Zhang, Guangquan},
-  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
-  year      = {2025}
+@inproceedings{baena2006eddm,
+  author    = {Baena-Garc{\'i}a, Manuel and del Campo-{\'A}vila, Jos{\'e} and Fidalgo, Ra{\'u}l and Bifet, Albert and Gavald{\`a}, Ricard and Morales-Bueno, Rafael},
+  title     = {Early Drift Detection Method},
+  booktitle = {Proceedings of the Fourth International Workshop on Knowledge Discovery from Data Streams (IWKDDS '06)},
+  pages     = {77--86}, year = {2006}
 }
 
-% ---------- Fisher geometry ----------
+@inproceedings{bifet2007adwin,
+  author    = {Bifet, Albert and Gavald{\`a}, Ricard},
+  title     = {Learning from Time-Changing Data with Adaptive Windowing},
+  booktitle = {Proceedings of the 2007 SIAM International Conference on Data Mining (SDM 2007)},
+  pages     = {443--448}, year = {2007},
+  doi       = {10.1137/1.9781611972771.42}
+}
 
-@inproceedings{kunstner2019empirical,
-  title     = {Limitations of the Empirical {F}isher Approximation for Natural Gradient Descent},
-  author    = {Kunstner, Frederik and Balles, Lukas and Hennig, Philipp},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+@inproceedings{gama2004learning,
+  author    = {Gama, Jo{\~a}o and Medas, Pedro and Castillo, Gladys and Rodrigues, Pedro Pereira},
+  title     = {Learning with Drift Detection},
+  booktitle = {Proceedings of the 17th Brazilian Symposium on Artificial Intelligence (SBIA '04)},
+  series    = {Lecture Notes in Computer Science, Vol. 3171},
+  publisher = {Springer}, address = {Berlin, Heidelberg},
+  pages     = {286--295}, year = {2004},
+  doi       = {10.1007/978-3-540-28645-5_29}
+}
+
+@article{gama2014survey,
+  author  = {Gama, Jo{\~a}o and {\v Z}liobait{\.e}, Indr{\.e} and Bifet, Albert and Pechenizkiy, Mykola and Bouchachia, Abdelhamid},
+  title   = {A Survey on Concept Drift Adaptation},
+  journal = {ACM Computing Surveys},
+  volume  = {46}, number = {4}, articleno = {44}, pages = {1--37}, year = {2014},
+  doi     = {10.1145/2523813}
+}
+
+@inproceedings{garg2022atc,
+  author    = {Garg, Saurabh and Balakrishnan, Sivaraman and Lipton, Zachary Chase and Neyshabur, Behnam and Sedghi, Hanie},
+  title     = {Leveraging Unlabeled Data to Predict Out-of-Distribution Performance},
+  booktitle = {International Conference on Learning Representations (ICLR 2022)},
+  year      = {2022}
+}
+
+@article{gretton2012kernel,
+  author  = {Gretton, Arthur and Borgwardt, Karsten M. and Rasch, Malte J. and Sch{\"o}lkopf, Bernhard and Smola, Alexander},
+  title   = {A Kernel Two-Sample Test},
+  journal = {Journal of Machine Learning Research},
+  volume  = {13}, pages = {723--773}, year = {2012}
+}
+
+@inproceedings{guillory2021doc,
+  author    = {Guillory, Devin and Shankar, Vaishaal and Ebrahimi, Sayna and Darrell, Trevor and Schmidt, Ludwig},
+  title     = {Predicting with Confidence on Unseen Distributions},
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV 2021)},
+  pages     = {1134--1144}, year = {2021}
+}
+
+@inproceedings{guo2017calibration,
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  title     = {On Calibration of Modern Neural Networks},
+  booktitle = {Proceedings of the 34th International Conference on Machine Learning (ICML 2017)},
+  pages     = {1321--1330}, year = {2017}
+}
+
+@inproceedings{hendrycks2019benchmarking,
+  author    = {Hendrycks, Dan and Dietterich, Thomas},
+  title     = {Benchmarking Neural Network Robustness to Common Corruptions and Perturbations},
+  booktitle = {International Conference on Learning Representations (ICLR 2019)},
   year      = {2019}
 }
 
-@inproceedings{komorniczak2024parallel,
-  title     = {Unsupervised Concept Drift Detection Based on Parallel Activations of Neural Network},
-  author    = {Komorniczak, Joanna and Ksieniewicz, Pawe{\l}},
-  booktitle = {Discovering Drift Phenomena in Evolving Landscapes (DELTA 2024), LNCS 15013},
-  publisher = {Springer},
-  year      = {2025}
-}
-
-@article{amari1998natural,
-  title   = {Natural Gradient Works Efficiently in Learning},
-  author  = {Amari, Shun-ichi},
-  journal = {Neural Computation},
-  volume  = {10},
-  number  = {2},
-  year    = {1998}
-}
-
-@inproceedings{martens2015kfac,
-  title     = {Optimizing Neural Networks with Kronecker-factored Approximate Curvature},
-  author    = {Martens, James and Grosse, Roger},
-  booktitle = {International Conference on Machine Learning (ICML)},
-  year      = {2015}
-}
-
-@article{kirkpatrick2017overcoming,
-  title   = {Overcoming Catastrophic Forgetting in Neural Networks},
-  author  = {Kirkpatrick, James and Pascanu, Razvan and Rabinowitz, Neil and Veness, Joel and others},
-  journal = {Proceedings of the National Academy of Sciences},
-  volume  = {114},
-  number  = {13},
-  year    = {2017}
+@inproceedings{hendrycks2017baseline,
+  author    = {Hendrycks, Dan and Gimpel, Kevin},
+  title     = {A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks},
+  booktitle = {International Conference on Learning Representations (ICLR 2017)},
+  year      = {2017}
 }
 
 @inproceedings{karakida2019universal,
-  title     = {Universal Statistics of Fisher Information in Deep Neural Networks: Mean Field Approach},
   author    = {Karakida, Ryo and Akaho, Shotaro and Amari, Shun-ichi},
-  booktitle = {International Conference on Artificial Intelligence and Statistics (AISTATS)},
-  year      = {2019}
+  title     = {Universal Statistics of Fisher Information in Deep Neural Networks: Mean Field Approach},
+  booktitle = {Proceedings of the 22nd International Conference on Artificial Intelligence and Statistics (AISTATS 2019)},
+  series    = {PMLR}, volume = {89}, pages = {1032--1041}, year = {2019}
 }
 
-@article{zhang2023score,
-  title   = {Concept Drift Monitoring and Diagnostics of Supervised Learning Models via Score Vectors},
-  author  = {Zhang, Kungang and Bui, Anh T. and Apley, Daniel W.},
-  journal = {Technometrics},
-  volume  = {65},
-  number  = {2},
-  pages   = {137--149},
-  year    = {2023}
+@article{kirkpatrick2017overcoming,
+  author  = {Kirkpatrick, James and Pascanu, Razvan and Rabinowitz, Neil and Veness, Joel and Desjardins, Guillaume and Rusu, Andrei A. and Milan, Kieran and Quan, John and Ramalho, Tiago and Grabska-Barwi{\'n}ska, Agnieszka and Hassabis, Demis and Clopath, Claudia and Kumaran, Dharshan and Hadsell, Raia},
+  title   = {Overcoming Catastrophic Forgetting in Neural Networks},
+  journal = {Proceedings of the National Academy of Sciences},
+  volume  = {114}, number = {13}, pages = {3521--3526}, year = {2017},
+  doi     = {10.1073/pnas.1611835114}
+}
+
+@inproceedings{koh2021wilds,
+  author    = {Koh, Pang Wei and Sagawa, Shiori and Marklund, Henrik and Xie, Sang Michael and Zhang, Marvin and Balsubramani, Akshay and Hu, Weihua and Yasunaga, Michihiro and Phillips, Richard Lanas and Gao, Irena and Lee, Tony and David, Etienne and Stavness, Ian and Guo, Wei and Earnshaw, Berton and Haque, Imran and Beery, Sara M. and Leskovec, Jure and Kundaje, Anshul and Pierson, Emma and Levine, Sergey and Finn, Chelsea and Liang, Percy},
+  title     = {WILDS: A Benchmark of in-the-Wild Distribution Shifts},
+  booktitle = {Proceedings of the 38th International Conference on Machine Learning (ICML 2021)},
+  series    = {PMLR}, volume = {139}, pages = {5637--5664}, year = {2021}
+}
+
+@inproceedings{komorniczak2024parallel,
+  author    = {Komorniczak, Joanna and Ksieniewicz, Pawe{\l}},
+  title     = {Unsupervised Concept Drift Detection Based on Parallel Activations of Neural Network},
+  booktitle = {Discovering Drift Phenomena in Evolving Landscapes},
+  series    = {Lecture Notes in Computer Science}, publisher = {Springer},
+  pages     = {111--127}, year = {2025},
+  doi       = {10.1007/978-3-031-82346-6_8}
+}
+
+@inproceedings{kunstner2019empirical,
+  author    = {Kunstner, Frederik and Balles, Lukas and Hennig, Philipp},
+  title     = {Limitations of the Empirical Fisher Approximation for Natural Gradient Descent},
+  booktitle = {Advances in Neural Information Processing Systems 32 (NeurIPS 2019)},
+  pages     = {4158--4169}, year = {2019}
+}
+
+@inproceedings{lee2018mahalanobis,
+  author    = {Lee, Kimin and Lee, Kibok and Lee, Honglak and Shin, Jinwoo},
+  title     = {A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks},
+  booktitle = {Proceedings of the 32nd International Conference on Neural Information Processing Systems (NeurIPS '18)},
+  publisher = {Curran Associates Inc.}, pages = {7167--7177}, year = {2018}
+}
+
+@inproceedings{lipton2018label,
+  author    = {Lipton, Zachary C. and Wang, Yu-Xiang and Smola, Alexander J.},
+  title     = {Detecting and Correcting for Label Shift with Black Box Predictors},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning (ICML 2018)},
+  series    = {PMLR}, volume = {80}, pages = {3122--3130}, year = {2018}
+}
+
+@article{lu2018learning,
+  author  = {Lu, Jie and Liu, Anjin and Dong, Fan and Gu, Feng and Gama, Jo{\~a}o and Zhang, Guangquan},
+  title   = {Learning under Concept Drift: A Review},
+  journal = {IEEE Transactions on Knowledge and Data Engineering},
+  volume  = {31}, number = {12}, pages = {2346--2363}, year = {2019},
+  doi     = {10.1109/TKDE.2018.2876857}
+}
+
+@inproceedings{pudd2025,
+  author    = {Lu, Pengqian and Lu, Jie and Liu, Anjin and Zhang, Guangquan},
+  title     = {Early Concept Drift Detection via Prediction Uncertainty},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {39}, number = {18}, pages = {19124--19132}, year = {2025},
+  doi       = {10.1609/aaai.v39i18.34105}
+}
+
+@inproceedings{martens2015kfac,
+  author    = {Martens, James and Grosse, Roger},
+  title     = {Optimizing Neural Networks with Kronecker-factored Approximate Curvature},
+  booktitle = {Proceedings of the 32nd International Conference on Machine Learning (ICML 2015)},
+  series    = {PMLR}, volume = {37}, pages = {2408--2417}, year = {2015}
+}
+
+@article{montiel2021river,
+  author  = {Montiel, Jacob and Halford, Max and Mastelini, Saulo Martiello and Bolmier, Geoffrey and Sourty, Raphael and Vaysse, Robin and Zouitine, Adil and Gomes, Heitor Murilo and Read, Jesse and Abdessalem, Talel and Bifet, Albert},
+  title   = {River: Machine Learning for Streaming Data in Python},
+  journal = {Journal of Machine Learning Research},
+  volume  = {22}, number = {110}, pages = {1--8}, year = {2021}
+}
+
+@inproceedings{ovadia2019trust,
+  author    = {Ovadia, Yaniv and Fertig, Emily and Ren, Jie and Nado, Zachary and Sculley, D. and Nowozin, Sebastian and Dillon, Joshua V. and Lakshminarayanan, Balaji and Snoek, Jasper},
+  title     = {Can You Trust Your Model's Uncertainty? Evaluating Predictive Uncertainty Under Dataset Shift},
+  booktitle = {Advances in Neural Information Processing Systems 32 (NeurIPS 2019)},
+  pages     = {13969--13980}, year = {2019}
+}
+
+@article{page1954cusum,
+  author  = {Page, E. S.},
+  title   = {Continuous Inspection Schemes},
+  journal = {Biometrika},
+  volume  = {41}, number = {1-2}, pages = {100--115}, year = {1954},
+  doi     = {10.1093/biomet/41.1-2.100}
 }
 
 @article{pandey2025zdp,
-  title   = {Zero-Direction Probing: A Linear-Algebraic Framework for Deep Analysis of Large-Language-Model Drift},
   author  = {Pandey, Amit},
+  title   = {Zero-Direction Probing: A Linear-Algebraic Framework for Deep Analysis of Large-Language-Model Drift},
   journal = {arXiv preprint arXiv:2508.06776},
-  year    = {2025}
+  year    = {2025},
+  doi     = {10.48550/arXiv.2508.06776}
 }
 
-% ---------- systems and numerics ----------
+@book{quinonero2009dataset,
+  editor    = {Qui{\~n}onero-Candela, Joaquin and Sugiyama, Masashi and Schwaighofer, Anton and Lawrence, Neil D.},
+  title     = {Dataset Shift in Machine Learning},
+  publisher = {The MIT Press}, year = {2009},
+  doi       = {10.7551/mitpress/9780262170055.001.0001}
+}
+
+@article{raab2020kswin,
+  author  = {Raab, Christoph and Heusinger, Moritz and Schleif, Frank-Michael},
+  title   = {Reactive Soft Prototype Computing for Concept Drift Streams},
+  journal = {Neurocomputing},
+  volume  = {416}, pages = {340--351}, year = {2020},
+  doi     = {10.1016/j.neucom.2019.11.111}
+}
+
+@inproceedings{rabanser2019failing,
+  author    = {Rabanser, Stephan and G{\"u}nnemann, Stephan and Lipton, Zachary C.},
+  title     = {Failing Loudly: An Empirical Study of Methods for Detecting Dataset Shift},
+  booktitle = {Advances in Neural Information Processing Systems 32 (NeurIPS 2019)},
+  pages     = {1394--1406}, year = {2019}
+}
 
 @inproceedings{sculley2015debt,
+  author    = {Sculley, D. and Holt, Gary and Golovin, Daniel and Davydov, Eugene and Phillips, Todd and Ebner, Dietmar and Chaudhary, Vinay and Young, Michael and Crespo, Jean-Fran{\c c}ois and Dennison, Dan},
   title     = {Hidden Technical Debt in Machine Learning Systems},
-  author    = {Sculley, D. and Holt, Gary and Golovin, Daniel and Davydov, Eugene and Phillips, Todd and Ebner, Dietmar and Chaudhary, Vinay and Young, Michael and Crespo, Jean-Fran{\c{c}}ois and Dennison, Dan},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2015}
+  booktitle = {Advances in Neural Information Processing Systems 28 (NIPS 2015)},
+  pages     = {2503--2511}, year = {2015}
 }
 
-@article{halko2011structure,
-  title   = {Finding Structure with Randomness: Probabilistic Algorithms for Constructing Approximate Matrix Decompositions},
-  author  = {Halko, Nathan and Martinsson, Per-Gunnar and Tropp, Joel A.},
-  journal = {SIAM Review},
-  volume  = {53},
-  number  = {2},
-  year    = {2011}
+@article{zhang2023score,
+  author  = {Zhang, Kungang and Bui, Anh T. and Apley, Daniel W.},
+  title   = {Concept Drift Monitoring and Diagnostics of Supervised Learning Models via Score Vectors},
+  journal = {Technometrics},
+  volume  = {65}, number = {2}, pages = {137--149}, year = {2023},
+  doi     = {10.1080/00401706.2022.2124310}
 }
