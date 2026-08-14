@@ -33,9 +33,10 @@
 \hyphenation{Out-of-distribution Ma-ha-la-no-bis Kol-mo-go-rov-Smir-nov
   Kro-neck-er-fac-tored re-pre-sen-ta-tions e-i-gen-de-com-po-si-tion}
 
-% Tighten the gap between a top/bottom float and the surrounding text
-% (e.g. Figure 1 above the Introduction heading on page 1).
-\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+% Pull top/bottom floats close to the surrounding text, so a figure that
+% floats to the top of a column (e.g. Figure 1) does not leave a large gap
+% above the next heading. Applied at begin-document so it wins over defaults.
+\AtBeginDocument{\setlength{\textfloatsep}{6pt plus 1pt minus 1pt}}
 
 \settopmatter{printacmref=true, printccs=true, printfolios=true}
 
