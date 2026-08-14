@@ -134,9 +134,9 @@ classes themselves stay similar, for example when flu cases rise in season
 \cite{lipton2018label}. In \emph{concept shift} $P(Y \mid X)$ itself changes,
 for example when a transaction that used to be legitimate is now fraud
 \cite{gama2014survey, lu2018learning}. In real streams these kinds arrive
-together and at different speeds: abrupt, gradual, incremental, or recurring.
+together and at different speeds: sudden, gradual, incremental, or recurring.
 The four speed profiles are drawn in Figure~\ref{fig:drift-types}. Tune a
-detector to catch the abrupt case and it can sit quietly through a slow one.
+detector to catch the sudden case and it can sit quietly through a slow one.
 
 \begin{figure}[tbp]
 \centering
@@ -200,8 +200,7 @@ the whole chain.
 
 Work on deployed-model monitoring sorts cleanly into three families by the
 signal each one watches: the labels (when available), the inputs, or the
-model's own outputs. Table~\ref{tab:families} places them side by side, along
-with the geometric family this paper belongs to.
+model's own outputs. Table~\ref{tab:families} places them side by side.
 
 \begin{table*}[t]
 \caption{Existing work: deployed-model monitoring families, grouped by the
