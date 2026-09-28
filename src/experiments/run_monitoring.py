@@ -48,6 +48,7 @@ from feather.data.vision import (
     mnist_datasets,
     rotated_mnist_test,
 )
+from feather.data.wilds import camelyon17_episodes, camelyon17_reference
 from feather.monitoring import (
     fit_monitors,
     head_params,
@@ -64,7 +65,8 @@ ROTATION_ANGLES = (0, 15, 30, 45, 60, 75, 90)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True, help="path to a final_model.pt")
-    parser.add_argument("--mode", required=True, choices=["rotated_mnist", "cifar10c"])
+    parser.add_argument("--mode", required=True,
+                        choices=["rotated_mnist", "cifar10c", "wilds_camelyon17"])
     parser.add_argument("--out-name", required=True, help="output folder name under outputs/")
     parser.add_argument("--batch-size", type=int, default=500, help="stream batch size")
     parser.add_argument("--quantile", type=float, default=0.99)
@@ -116,6 +118,8 @@ def episodes_for(args: argparse.Namespace):
     if args.mode == "rotated_mnist":
         for angle in ROTATION_ANGLES:
             yield f"rotation_{angle:02d}", rotated_mnist_test(angle, args.data_root)
+    elif args.mode == "wilds_camelyon17":
+        yield from camelyon17_episodes(args.data_root)
     else:
         corruptions = args.corruptions or list(CIFAR10C_CORRUPTIONS)
         unknown = set(corruptions) - set(CIFAR10C_CORRUPTIONS)
@@ -144,6 +148,8 @@ def main() -> None:
     model = load_frozen_model(args.model, device)
     if args.mode == "rotated_mnist":
         reference, _ = mnist_datasets(args.data_root)
+    elif args.mode == "wilds_camelyon17":
+        reference = camelyon17_reference(args.data_root)
     else:
         reference, _ = cifar10_datasets(args.data_root, augment=False)
 
@@ -191,7 +197,7 @@ def main() -> None:
     writer = None
     online_seconds = 0.0
     n_batches = 0
-    clean_episode = "clean" if args.mode == "cifar10c" else "rotation_00"
+    clean_episode = "rotation_00" if args.mode == "rotated_mnist" else "clean"
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         for episode, dataset in episodes_for(args):
             start = time.perf_counter()

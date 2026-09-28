@@ -3,8 +3,12 @@ activations) and ``head`` (the final Linear layer) so FEATHER's monitor can
 read activations and the softmax head's (W, b) without surgery."""
 
 from feather.models.cnn import SmallCNN
-from feather.models.resnet import CifarResNet18
+from feather.models.resnet import CifarResNet18, ResNet18
 
-MODELS = {"small_cnn": SmallCNN, "cifar_resnet18": CifarResNet18}
+MODELS = {
+    "small_cnn": SmallCNN,
+    "cifar_resnet18": CifarResNet18,
+    "resnet18": ResNet18,
+}
 
-__all__ = ["SmallCNN", "CifarResNet18", "MODELS"]
+__all__ = ["SmallCNN", "CifarResNet18", "ResNet18", "MODELS"]
