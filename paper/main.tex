@@ -76,7 +76,14 @@ outputs can see. Where FEATHER earns its keep is the silent regime, which we
 reach by building drift inside the empirically identified blind subspace of
 the trained ResNet-18. A shift no output statistic can see (softmax change
 below $10^{-10}$) drops a synthetic accuracy from $99\%$ to $7\%$, and FEATHER
-catches it on every batch while the output baselines see nothing at all.
+catches it on every batch while the output baselines see nothing at all. The
+geometry is not a quirk of synthetic drift: on WILDS Camelyon17, where the
+shift is real hospital-to-hospital variation, the binary head leaves a
+$511$-dimensional blind subspace and FEATHER follows the accuracy down from
+near-perfect on in-distribution patches to $58\%$ on the most distant hospital.
+A two-stage cascade then defers the projection to the batches a cheap
+full-space shift gate has already flagged, trimming the online work on streams
+that stay mostly quiet.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -105,7 +112,14 @@ outputs can see. Where FEATHER earns its keep is the silent regime, which we
 reach by building drift inside the empirically identified blind subspace of
 the trained ResNet-18. A shift no output statistic can see (softmax change
 below $10^{-10}$) drops a synthetic accuracy from $99\%$ to $7\%$, and FEATHER
-catches it on every batch while the output baselines see nothing at all.
+catches it on every batch while the output baselines see nothing at all. The
+geometry is not a quirk of synthetic drift: on WILDS Camelyon17, where the
+shift is real hospital-to-hospital variation, the binary head leaves a
+$511$-dimensional blind subspace and FEATHER follows the accuracy down from
+near-perfect on in-distribution patches to $58\%$ on the most distant hospital.
+A two-stage cascade then defers the projection to the batches a cheap
+full-space shift gate has already flagged, trimming the online work on streams
+that stay mostly quiet.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -152,7 +166,7 @@ part. Bootstrapping over clean reference batches then pins the alarm
 thresholds to a chosen false-alarm rate. Online, all a batch costs is one
 matrix--vector projection.
 
-The paper contributes three things.
+The paper contributes four things.
 \begin{enumerate}
   \item{A two-line impossibility result
     (Proposition~\ref{prop:blind}): the blind subspace is exactly the set of
@@ -165,8 +179,13 @@ The paper contributes three things.
     \emph{measured} from held-out labels instead of assumed from corruption
     names, with a comparison against output-based baselines and a covariance
     ablation under held-out calibration, a deep-feature experiment that
-    exposes the blind spot on a trained ResNet-18, and a frank account of
-    where standard corruption benchmarks stop telling you anything.}
+    exposes the blind spot on a trained ResNet-18, a natural-shift experiment
+    on WILDS Camelyon17 where the drift is genuine hospital-to-hospital
+    variation rather than a synthetic corruption, and a frank account of where
+    standard corruption benchmarks stop telling you anything.}
+  \item{A two-stage cascade that defers FEATHER's projection to the batches a
+    cheap full-space shift gate flags first, with an honest accounting of when
+    this saves online work and when it does not.}
 \end{enumerate}
 
 \section{Related Work}
@@ -819,6 +838,58 @@ FEATHER & $0.02$ & $0.48$ & $1.00$ & $1.00$ \\
 \end{tabular}
 \end{table}
 
+\subsection{Natural Shift on Real Data: WILDS Camelyon17}
+\label{sec:wilds}
+
+The corruption suites are synthetic and the silent-drift experiment above is
+semi-synthetic, so the fair question is whether any of this survives a real
+distribution shift with real labels. We take it to WILDS Camelyon17
+\cite{koh2021wilds}, a binary tumour-vs-normal patch task
+($3\times96\times96$) whose domains are hospitals: a ResNet-18 trained on the
+in-distribution hospitals reaches $98.8\%$ on held-out in-distribution
+validation, the monitor is fitted on that same clean in-distribution data, and
+the two held-out hospitals are streamed as drift episodes. Because the task is
+binary the rank bound of Sect.~\ref{sec:theory} predicts an almost trivial
+blind structure, $\operatorname{rank}(\mathbf{F}) \le C-1 = 1$, and the trained
+network obliges: a single Fisher eigenvalue near $1.5\times10^{-2}$ and a cliff
+to $\sim10^{-18}$ beneath it, so the blind subspace is $511$ of the $512$
+feature dimensions. The bound is not a small-scale artefact; it holds exactly
+on real medical images.
+
+The hospital shift does real harm. Accuracy falls from $99.0\%$ on the
+in-distribution stream to $69.5\%$ and then $58.5\%$ on the two out-of-domain
+hospitals (Table~\ref{tab:wilds}), thirty to forty points. FEATHER tracks it
+cleanly, sitting at its $1\%$ budget in distribution and alarming on every
+batch of both shifted hospitals. The honest part of the result is that the
+output baselines do the same --- confidence, entropy, ATC, and the error proxy
+all alarm on all of the shifted batches --- and that is what we should expect.
+A hospital change alters stain and morphology in ways the model's outputs
+feel; this is output-\emph{visible} drift, the regime of
+Sect.~\ref{sec:saturation}, not the silent one. So Camelyon17 hands FEATHER no
+monopoly and we claim none. What it does settle is that on a real shift with
+real labels FEATHER tracks measured harm and holds its false-alarm budget on
+genuinely in-distribution data, standing beside the output family rather than
+in place of it --- the same complementary picture the synthetic benchmarks
+paint, now on data nobody designed to be caught.
+
+\begin{table}[!t]
+\caption{WILDS Camelyon17, mean over five seeds: measured accuracy and
+batch-level alarm rates per episode. The out-of-domain hospitals cost thirty
+to forty accuracy points; FEATHER tracks the harm and stays at budget in
+distribution. The shift is output-visible, so the output baselines track it
+too}
+\label{tab:wilds}
+\begin{tabular}{p{3.4cm}p{1.7cm}p{1.7cm}p{1.7cm}p{1.7cm}}
+\hline\noalign{\smallskip}
+Episode & Accuracy & FEATHER & Confidence & Entropy \\
+\noalign{\smallskip}\svhline\noalign{\smallskip}
+In-distribution & $0.99$ & $0.01$ & $0.06$ & $0.10$ \\
+OOD hospital 1 & $0.70$ & $1.00$ & $1.00$ & $1.00$ \\
+OOD hospital 2 & $0.59$ & $1.00$ & $1.00$ & $1.00$ \\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+\end{table}
+
 \subsection{A Calibration Finding}
 \label{sec:calibration}
 
@@ -876,6 +947,57 @@ Past that, the rank structure plays into randomized eigensolvers
 for defining $\mathcal{N}$. The online projection stays a single
 matrix--vector product at any $d$.
 
+\subsection{A Two-Stage Cascade}
+\label{sec:cascade}
+
+The projection is already cheap, but on a long clean stream it still runs every
+batch, and there is an easy way to spend less. FEATHER's statistic
+$\|\mathbf{B}^\top\Delta\mu\|$ is the blind-subspace part of the full-space
+shift $\|\Delta\mu\|$, so the full-space shift is a strictly cheaper gate that
+responds to any drift, blind or visible --- one mean and one norm, no
+projection. We calibrate a threshold on it exactly the way we calibrate
+FEATHER's own, and only when it fires do we run the blind-subspace monitor to
+sort the flagged shift into visible (defer to the confidence tools) or blind
+(alarm). A confidence-based gate will not do here, for the reason the whole
+paper turns on: by Proposition~\ref{prop:blind} the outputs cannot see blind
+drift, so a confidence-triggered cascade would never call FEATHER on the one
+thing FEATHER is for.
+
+The cascade keeps the detection and buys back the cost
+(Table~\ref{tab:cascade}, CIFAR-10-C, five seeds). On harmful episodes it
+matches FEATHER-always batch for batch at zero added delay: the gate fires the
+moment the shift starts and the blind-subspace check confirms it. On the benign
+episodes a harm-aware monitor should ignore, it runs the projection on only
+$16\%$ of batches and, as a side effect of the gate screening out the small
+shifts, alarms less often than FEATHER-always did --- $16\%$ against $40\%$ ---
+for a few batches of latency. On clean data it runs FEATHER on nothing and
+raises nothing. The saving lands exactly where drift is rare, which is where a
+deployed monitor spends nearly all of its time. The one place it buys nothing
+is Rotated MNIST: those rotations are large enough to trip the gate on almost
+every batch, so the cascade collapses back to FEATHER-always with no cost
+gained --- a fair reminder that the gate earns its keep only when the benign
+and clean traffic really do sit near the reference, which on the corruption
+suites it does.
+
+\begin{table}[!t]
+\caption{FEATHER-Lite cascade on CIFAR-10-C, mean over five seeds. ``FEATHER
+runs'' is the fraction of batches on which the gate fires and the projection
+is computed. Detection on harmful drift matches FEATHER-always at zero delay,
+while benign traffic costs a fraction of the projections and fewer false
+alarms}
+\label{tab:cascade}
+\begin{tabular}{p{2.6cm}p{2.3cm}p{2.3cm}p{2.6cm}}
+\hline\noalign{\smallskip}
+Episode grade & FEATHER runs & Cascade alarm & FEATHER-always \\
+\noalign{\smallskip}\svhline\noalign{\smallskip}
+Clean & $0.00$ & $0.00$ & $0.03$ \\
+Benign & $0.16$ & $0.16$ & $0.40$ \\
+Gray & $0.76$ & $0.76$ & $0.81$ \\
+Harmful & $0.80$ & $0.80$ & $0.82$ \\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+\end{table}
+
 \section{Discussion}
 \label{sec:discussion}
 
@@ -930,22 +1052,23 @@ test FEATHER's tracking and false-alarm behavior but not the silent regime
 where Proposition~\ref{prop:blind} gives it a monopoly.
 Section~\ref{sec:blinddeep} does reach that regime on the trained network, but
 only semi-synthetically, with the drift injected in activation space and the
-harm set by a synthetic label rule. Closing the gap to a pixel-space
+harm set by a synthetic label rule. The natural shift we add on real data,
+WILDS Camelyon17 (Sect.~\ref{sec:wilds}), confirms that FEATHER tracks measured
+harm and holds its budget on genuinely out-of-domain hospitals, but that shift
+is output-visible, so it does not enter the silent regime either. A pixel-space
 perturbation whose feature displacement lands in $\mathcal{N}$ under unchanged
-real labels, perhaps drawn from the wild shifts cataloged in WILDS
-\cite{koh2021wilds} rather than synthetic corruptions, is, we think, the
-follow-up worth most. Held-out calibration only holds the clean false-alarm
+real labels remains the follow-up worth most. Held-out calibration only holds the clean false-alarm
 rate at budget when the reference data matches the deployment stream; where
 they differ, as with the MNIST CNN's train-to-test activation shift, the
 thresholds have to be recalibrated on deployment-matched data
-(Sect.~\ref{sec:calibration}). Two more extensions fall out of the design and
-we leave them for later. One is a cascade that runs a cheap classical change
-detector up front and only calls FEATHER to sort a flagged shift into
-output-visible or blind, buying lower average cost for a little latency. The
-other, since the blind subspace belongs to the frozen head, is an
+(Sect.~\ref{sec:calibration}). One extension of the design we have
+already taken up: the two-stage cascade of Sect.~\ref{sec:cascade} runs a cheap
+full-space gate up front and calls FEATHER only on flagged batches, cutting the
+projection cost on benign traffic without losing harmful detection. One is
+still open: since the blind subspace belongs to the frozen head, an
 intermediate-layer version through a Kronecker-factored Fisher
-\cite{martens2015kfac}, for drift that is already gone before the penultimate
-features.
+\cite{martens2015kfac} would catch drift that is already gone before the
+penultimate features.
 
 \section{Conclusion}
 \label{sec:conclusion}
