@@ -51,17 +51,14 @@
 
 \maketitle
 
-\abstract*{Most label-free tools for watching a deployed classifier read
-the model's outputs: softmax confidence, entropy, or a proxy trained to
-predict its errors. Every tool in that family shares one blind spot, and that
-blind spot can be characterized exactly. For a $C$-class softmax
-head, the Fisher information of the log-likelihood with respect to the
-penultimate activation has rank at most $C-1$; its orthogonal complement is
-the set of activation directions that move every logit by the same amount,
-which the softmax then cancels. FEATHER is a streaming monitor built on that
-fact: one offline pass gives the exact Fisher matrix and its blind subspace,
-each online batch costs one projection, and a bootstrap fixes the false-alarm
-rate in advance. On Rotated MNIST and CIFAR-10-C (five seeds each) the
+\abstract*{Label-free monitors of a deployed classifier read its outputs:
+confidence, entropy, or a learned error proxy. All share one blind spot, which
+can be characterized exactly: for a $C$-class softmax head, the Fisher
+information of the log-likelihood with respect to the penultimate activation
+has rank at most $C-1$, and its orthogonal complement moves every logit
+equally, which the softmax cancels. FEATHER monitors that complement: one
+offline pass gives the exact Fisher matrix and blind subspace, each online
+batch costs one projection, and a bootstrap fixes the false-alarm rate. On Rotated MNIST and CIFAR-10-C (five seeds each) the
 blind-shift score follows the measured accuracy drop, the predicted rank
 structure shows up exactly (nine informative directions out of 512 in a
 ResNet-18), and the Fisher geometry nearly halves the benign false alarms of
@@ -70,21 +67,18 @@ subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
 WILDS Camelyon17 FEATHER follows real hospital-to-hospital harm, and a
-two-stage cascade reduces its online cost on streams that remain mostly stationary.
+two-stage cascade cuts its online cost.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
-\abstract{Most label-free tools for watching a deployed classifier read
-the model's outputs: softmax confidence, entropy, or a proxy trained to
-predict its errors. Every tool in that family shares one blind spot, and that
-blind spot can be characterized exactly. For a $C$-class softmax
-head, the Fisher information of the log-likelihood with respect to the
-penultimate activation has rank at most $C-1$; its orthogonal complement is
-the set of activation directions that move every logit by the same amount,
-which the softmax then cancels. FEATHER is a streaming monitor built on that
-fact: one offline pass gives the exact Fisher matrix and its blind subspace,
-each online batch costs one projection, and a bootstrap fixes the false-alarm
-rate in advance. On Rotated MNIST and CIFAR-10-C (five seeds each) the
+\abstract{Label-free monitors of a deployed classifier read its outputs:
+confidence, entropy, or a learned error proxy. All share one blind spot, which
+can be characterized exactly: for a $C$-class softmax head, the Fisher
+information of the log-likelihood with respect to the penultimate activation
+has rank at most $C-1$, and its orthogonal complement moves every logit
+equally, which the softmax cancels. FEATHER monitors that complement: one
+offline pass gives the exact Fisher matrix and blind subspace, each online
+batch costs one projection, and a bootstrap fixes the false-alarm rate. On Rotated MNIST and CIFAR-10-C (five seeds each) the
 blind-shift score follows the measured accuracy drop, the predicted rank
 structure shows up exactly (nine informative directions out of 512 in a
 ResNet-18), and the Fisher geometry nearly halves the benign false alarms of
@@ -93,7 +87,7 @@ subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
 WILDS Camelyon17 FEATHER follows real hospital-to-hospital harm, and a
-two-stage cascade reduces its online cost on streams that remain mostly stationary.
+two-stage cascade cuts its online cost.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -428,7 +422,7 @@ no harm (Sect.~\ref{sec:alarms}).
 
 \begin{figure}[t]
 \sidecaption[t]
-\includegraphics[width=7.4cm]{figures/results_cifar10c}
+\includegraphics[width=6.8cm]{figures/results_cifar10c}
 \caption{CIFAR-10-C, all 96 episodes and five seeds (480 points). The
 blind-shift score grows with the measured accuracy drop}
 \label{fig:cifar}
@@ -480,7 +474,7 @@ Sensitive ($\mathcal{S}$) & $6.3\times10^{-2}$ & $0.02$ & $0.46$ & $0.99$ \\
 
 \begin{figure}[t]
 \sidecaption[t]
-\includegraphics[width=7.4cm]{figures/blind_deep}
+\includegraphics[width=6.8cm]{figures/blind_deep}
 \caption{Blind-subspace drift on the trained ResNet-18. As the shift grows,
 FEATHER alarms and the synthetic error climb together, while the largest
 change in any model output stays on its $10^{-10}$ floor and the full-space
