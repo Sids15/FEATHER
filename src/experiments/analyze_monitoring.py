@@ -117,8 +117,13 @@ def load_episode_table(monitor_dir: Path) -> tuple[str, int, list[dict]]:
         if has_baselines:
             row["atc"] = baseline["atc"] - mean(batch_rows, "atc_score")
             row["proxy"] = mean(batch_rows, "proxy_score") - baseline["proxy"]
+            # clean-heldout baselines were calibrated on the clean episode's first
+            # half, so their clean false-alarm rate is scored on the second half only
+            scored = batch_rows
+            if episode == clean_name and fit.get("baseline_calibration") == "clean-heldout":
+                scored = batch_rows[len(batch_rows) // 2:]
             for name in BASELINE_MONITORS:
-                row[f"{name}_alarm_rate"] = mean(batch_rows, f"{name}_alarm")
+                row[f"{name}_alarm_rate"] = mean(scored, f"{name}_alarm")
         rows.append(row)
     return fit["mode"], fit["seed"], rows
 

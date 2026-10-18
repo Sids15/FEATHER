@@ -75,6 +75,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
     blind_basis, _ = np.linalg.qr(monitor["blind_basis"].astype(np.float64))
     pca_basis, _ = np.linalg.qr(monitor["pca_basis"].astype(np.float64))
     phi_all = calib["phi"].astype(np.float64)
+    labels = calib["labels"]
 
     config = MonitorConfig(batch_size=batch_size, n_bootstrap=500, quantile=0.99, seed=0)
     feather = SubspaceDriftMonitor(blind_basis, phi_all, config)
@@ -99,7 +100,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
     for direction, u in (("blind", u_blind), ("sensitive", u_sens)):
         blind_component = float(u @ u_blind)  # how far the shift moves the blind coord
         for alpha in alphas:
-            confs, ents, maxdp, f_alarms, p_alarms, ms_alarms, hidden_acc = [], [], [], [], [], [], []
+            confs, ents, maxdp, f_alarms, p_alarms, ms_alarms, hidden_acc, real_acc = [], [], [], [], [], [], [], []
             for _ in range(n_batches):
                 idx = rng.integers(0, len(phi_all), size=batch_size)
                 phi = phi_all[idx]
@@ -119,6 +120,9 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
                 drifted = (blind_coord[idx] + alpha * blind_component) > harm_threshold
                 hidden_label = np.where(drifted, (pred + 5) % 10, pred)
                 hidden_acc.append(float((pred == hidden_label).mean()))
+                # accuracy against the real CIFAR-10 labels: frozen under blind
+                # drift (outputs unchanged), falls under sensitive drift
+                real_acc.append(float((pred == labels[idx]).mean()))
             rows.append({
                 "seed": seed, "direction": direction, "alpha": round(float(alpha), 4),
                 "max_output_prob_change": float(f"{np.mean(maxdp):.3e}"),
@@ -128,6 +132,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
                 "pca_alarm_rate": round(float(np.mean(p_alarms)), 4),
                 "meanshift_alarm_rate": round(float(np.mean(ms_alarms)), 4),
                 "hidden_label_accuracy": round(float(np.mean(hidden_acc)), 4),
+                "real_label_accuracy": round(float(np.mean(real_acc)), 4),
             })
     return rows
 
@@ -158,11 +163,11 @@ def figure(rows: list[dict], out: Path) -> None:
     ax.plot(alphas, series("max_output_prob_change"), color=RED, linewidth=2.2,
             marker="s", markersize=4, label="max output-prob change")
     ax.plot(alphas, 1.0 - series("hidden_label_accuracy"), color=BLUE, linewidth=2.0,
-            linestyle="--", marker="^", markersize=4, label="hidden-label error")
+            linestyle="--", marker="^", markersize=4, label="synthetic-rule error")
     ax.set_xlabel("blind-subspace shift magnitude  α", color=SECONDARY, fontsize=9)
     ax.set_ylabel("rate", color=SECONDARY, fontsize=9)
     ax.set_title("CIFAR-10 ResNet-18: blind-subspace drift is output-invisible,\n"
-                 "FEATHER-visible, and (under a hidden rule) harmful",
+                 "FEATHER-visible, and (under a synthetic rule) harmful",
                  color=INK, fontsize=10)
     ax.legend(loc="center right", fontsize=8, frameon=False, labelcolor=SECONDARY)
     fig.tight_layout()
@@ -212,6 +217,7 @@ def main() -> None:
             "pca_alarm_rate": round(float(np.mean([r["pca_alarm_rate"] for r in sel])), 4),
             "meanshift_alarm_rate": round(float(np.mean([r["meanshift_alarm_rate"] for r in sel])), 4),
             "hidden_label_accuracy": round(float(np.mean([r["hidden_label_accuracy"] for r in sel])), 4),
+            "real_label_accuracy": round(float(np.mean([r["real_label_accuracy"] for r in sel])), 4),
         }
     (out_dir / "blind_deep_summary.json").write_text(json.dumps(summary, indent=2))
     figure(all_rows, args.runs_root / "paper" / "figures" / "blind_deep.png")

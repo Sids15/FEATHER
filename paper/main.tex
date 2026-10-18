@@ -62,7 +62,7 @@ batch costs one projection, and a bootstrap fixes the false-alarm rate. On Rotat
 blind-shift score follows the measured accuracy drop, the predicted rank
 structure shows up exactly (nine informative directions out of 512 in a
 ResNet-18), and the Fisher geometry nearly halves the benign false alarms of
-a covariance ablation (48\% vs.\ 83\%). A shift built inside the blind
+a covariance ablation (48\% vs.\ 83\% on CIFAR-10-C). A shift built inside the blind
 subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
@@ -82,7 +82,7 @@ batch costs one projection, and a bootstrap fixes the false-alarm rate. On Rotat
 blind-shift score follows the measured accuracy drop, the predicted rank
 structure shows up exactly (nine informative directions out of 512 in a
 ResNet-18), and the Fisher geometry nearly halves the benign false alarms of
-a covariance ablation (48\% vs.\ 83\%). A shift built inside the blind
+a covariance ablation (48\% vs.\ 83\% on CIFAR-10-C). A shift built inside the blind
 subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
@@ -352,7 +352,9 @@ by input, hence so is any functional of them. \qed
 
 Proposition~\ref{prop:blind} is an impossibility result about output-based
 monitoring, not a claim that blind drift is harmful; Sect.~\ref{sec:experiments}
-measures harm instead of assuming it.
+measures harm instead of assuming it. It also shows that $\mathcal{N}$ is fixed
+by $W$ alone; computing it through $\F$ checks the rank structure on the
+trained model.
 
 \section{Experiments}
 \label{sec:experiments}
@@ -376,17 +378,17 @@ more than 30 points.
 
 \runinhead{Detectors.}
 FEATHER; a covariance ablation (the same pipeline with $\F$ swapped for the
-activation covariance at the same blind dimension, which isolates the Fisher
-weighting); and four output-based baselines: mean max-softmax confidence
+activation covariance at the same blind dimension, which isolates the choice
+of subspace); and four output-based baselines: mean max-softmax confidence
 \cite{hendrycks2017baseline}, mean prediction entropy, an ATC-style accuracy
 estimate \cite{garg2022atc}, and a logistic error proxy after
 \cite{amoukou2024sequential}. We also score the simple full-space mean shift
 $\lVert\Delta\mu_t\rVert$, the representation-space analogue of a two-sample
 test on the feature mean and the centroid displacement NEO \cite{murphy2026neo}
-re-centers by; FEATHER is that same mean shift restricted to the blind subspace
-and reweighted by the Fisher geometry. Every baseline alarms on
-a bootstrap quantile of its own statistic, so the comparison is at a matched
-false-alarm budget.
+re-centers by; FEATHER is that same mean shift restricted to the blind
+subspace. Every monitor alarms above the 99th percentile of its statistic's
+bootstrap distribution; FEATHER alarms on either of two statistics, so its
+nominal false-alarm rate is up to $2\%$, against $1\%$ for the others.
 
 \subsection{Geometry Checks}
 \label{sec:geomchecks}
@@ -404,8 +406,7 @@ trained networks the rank bound (\ref{eq:rank}) appears exactly: in all ten
 runs, exactly nine eigenvalues clear machine precision, and on a representative
 CIFAR-10 seed $\lambda_9 = 9.1 \times 10^{-5}$ while
 $\lambda_{10} = 5 \times 10^{-19}$. The blind subspace is thus 503 of 512
-dimensions ($119$ of $128$ for the MNIST CNN), and is the same for any
-threshold across fourteen decades.
+dimensions ($119$ of $128$ for the MNIST CNN).
 
 \subsection{Blind-Subspace Shift Tracks Measured Harm}
 \label{sec:saturation}
@@ -415,10 +416,9 @@ FEATHER score rises monotonically with it. On CIFAR-10-C (Fig.~\ref{fig:cifar})
 the blind-shift score tracks the measured accuracy drop. At the episode level, though, these benchmarks do not separate the
 detectors: FEATHER, the covariance ablation, and the confidence and entropy
 baselines all pull harmful from benign at AUROC $1.0$ on both benchmarks and
-every seed. Standard corruption suites produce \emph{output-visible} drift, the
-type in which output-based monitors perform well and FEATHER only matches them. What
-still tells the monitors apart is how often each one alarms on drift that does
-no harm (Sect.~\ref{sec:alarms}).
+every seed. Corruption suites produce \emph{output-visible} drift; what separates
+the monitors is how often they alarm on drift that does no harm
+(Sect.~\ref{sec:alarms}).
 
 \begin{figure}[t]
 \sidecaption[t]
@@ -445,29 +445,32 @@ $\alpha=0.3$). A blind-subspace shift large enough to trigger FEATHER on every
 batch moves the most-changed softmax probability by under $2\times10^{-10}$,
 and mean confidence and entropy by under $10^{-12}$, yet pushes the synthetic
 accuracy from $99\%$ down to $7\%$: harmful drift no confidence-, entropy-, or
-proxy-based monitor can react to. The sensitive-subspace control reverses every
-entry: the outputs move, an output monitor sees it, and FEATHER remains at its
-$2\%$ floor. The plain mean shift, at the same budget, detects only $41\%$ of
+proxy-based monitor can react to. Under the sensitive-subspace control the
+outputs move and FEATHER stays at its $2\%$ floor. The plain mean shift, at the same budget, detects only $41\%$ of
 blind-drift batches at $\alpha=0.3$, and $5\%$ at $\alpha=0.2$, where accuracy
 has already fallen to $43\%$. Clean-batch noise in $\Delta\mu$ is concentrated
 in the high-variance, class-discriminative sensitive directions; FEATHER
 projects them out, which lowers its threshold by a factor of about $3.4$
 ($0.11$ vs.\ $0.37$). Figure~\ref{fig:blinddeep} follows these effects as
 $\alpha$ grows.
-Because the drift is injected in activation space and the harm comes from a
-synthetic rule, this establishes output-invisibility and FEATHER detection on a
-real network without yet showing it on natural data with real labels.
+Against the real labels of these reference images, accuracy stays at
+$99.97\%$ in both directions: a shift that leaves every output unchanged cannot change
+correctness against fixed labels, so the harm here exists only under the
+synthetic rule. The experiment establishes output-invisibility and FEATHER
+detection on a real network, not harm on natural data.
 
 \begin{table}[!t]
 \caption{Deep-feature silent drift on the CIFAR-10 ResNet-18 at $\alpha=0.3$
-(mean over five seeds)}
+(mean over five seeds). The synthetic rule reads only the blind coordinate, so
+a sensitive shift cannot trigger it (--)}
 \label{tab:blinddeep}
-\begin{tabular}{p{2.2cm}p{2.3cm}p{1.9cm}p{2.1cm}p{2.0cm}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{1.8cm}p{1.9cm}p{1.4cm}p{1.6cm}p{1.6cm}p{1.8cm}}
 \hline\noalign{\smallskip}
-Shift direction & Max output change & FEATHER alarm & Mean-shift alarm & Synthetic accuracy \\
+Shift direction & Max output change & FEATHER alarm & Mean-shift alarm & Real-label accuracy & Synthetic-rule accuracy \\
 \noalign{\smallskip}\svhline\noalign{\smallskip}
-Blind ($\mathcal{N}$) & $1.7\times10^{-10}$ & $\mathbf{1.00}$ & $0.41$ & $0.07$ \\
-Sensitive ($\mathcal{S}$) & $6.3\times10^{-2}$ & $0.02$ & $0.46$ & $0.99$ \\
+Blind ($\mathcal{N}$) & $1.7\times10^{-10}$ & $\mathbf{1.00}$ & $0.41$ & $1.00$ & $0.07$ \\
+Sensitive ($\mathcal{S}$) & $6.3\times10^{-2}$ & $0.02$ & $0.46$ & $1.00$ & -- \\
 \noalign{\smallskip}\hline\noalign{\smallskip}
 \end{tabular}
 \end{table}
@@ -510,10 +513,11 @@ shifts than the ablation ($0.59 \pm 0.05$ vs.\ $0.67 \pm 0.05$) while both
 detect every harmful one.
 
 \begin{table}[!t]
-\caption{Batch-level alarm rates on CIFAR-10-C at matched calibration
-(99th-percentile budget; mean over five seeds). Every monitor catches all
-harmful batches; they diverge on benign drift, where the output baselines lead
-because this drift is output-visible (contrast Table~\ref{tab:blinddeep})}
+\caption{Batch-level alarm rates on CIFAR-10-C (mean over five seeds). Output
+baselines are calibrated on half of the clean test stream and scored on the
+other half; the other monitors on the training reference. All catch every
+harmful batch; on benign drift, which is output-visible, the output baselines
+lead}
 \label{tab:alarms}
 \begin{tabular}{p{3.3cm}p{1.7cm}p{1.7cm}p{1.7cm}p{1.7cm}}
 \hline\noalign{\smallskip}
@@ -521,8 +525,8 @@ Monitor & Clean & Benign & Gray & Harmful \\
 \noalign{\smallskip}\svhline\noalign{\smallskip}
 ATC \cite{garg2022atc} & $0.00$ & $\mathbf{0.06}$ & $0.82$ & $1.00$ \\
 Confidence drop & $0.00$ & $0.07$ & $0.89$ & $1.00$ \\
-Entropy rise & $0.01$ & $0.09$ & $0.93$ & $1.00$ \\
-Error proxy \cite{amoukou2024sequential} & $0.01$ & $\mathbf{0.06}$ & $0.88$ & $1.00$ \\
+Entropy rise & $0.00$ & $0.09$ & $0.93$ & $1.00$ \\
+Error proxy \cite{amoukou2024sequential} & $0.00$ & $\mathbf{0.06}$ & $0.88$ & $1.00$ \\
 \noalign{\smallskip}
 Mean shift $\lVert\Delta\mu_t\rVert$ & $0.00$ & $0.20$ & $0.94$ & $1.00$ \\
 Covariance ablation & $0.28$ & $0.83$ & $1.00$ & $1.00$ \\
@@ -542,7 +546,7 @@ the rank bound predicts for a binary task, one Fisher eigenvalue
 ($1.5\times10^{-2}$) sits above a cliff to $\sim10^{-18}$, leaving $511$ of
 $512$ dimensions blind. The hospital shift does real harm --- accuracy falls from $99.0\%$
 in distribution to $69.5\%$ and $58.5\%$ on the two out-of-domain hospitals ---
-and FEATHER tracks it, remaining at its $1\%$ budget in distribution and alarming
+and FEATHER tracks it, staying within its budget in distribution and alarming
 on every batch of both shifted hospitals. The output baselines alarm on all
 shifted batches too: stain and morphology changes are output-visible.
 
@@ -565,11 +569,13 @@ shift, too, is output-visible.
 \subsection{Cost and a Two-Stage Cascade}
 \label{sec:cascade}
 
-For the ResNet-18 the offline fit over 50{,}000 images takes 11.1 s, and
-monitoring adds 48 ms per 500-image batch; the $O(nd^2 + d^3)$ fit remains
-seconds at $d \approx 4096$ \cite{halko2011structure}. Since FEATHER's
-statistic is the blind part of $\lVert\Delta\mu\rVert$, the full-space shift
-serves as a cheaper gate, and the projection runs only when it alarms. On
+For the ResNet-18 the offline fit, including the forward passes over
+50{,}000 images, takes 11.1 s; online, FEATHER's statistics take 3.0 ms per
+500-image batch on a laptop CPU, small next to the forward pass. The
+$O(nd^2 + d^3)$ fit remains seconds at $d \approx 4096$
+\cite{halko2011structure}. Since FEATHER's statistic is the blind part of
+$\lVert\Delta\mu\rVert$, the full-space shift (0.05 ms) serves as a gate, and
+the projection runs only when it alarms. On
 CIFAR-10-C the cascade matches FEATHER-always on harmful episodes ($0.80$
 vs.\ $0.82$ of batches) and alarms on $16\%$ of benign batches against $40\%$;
 on Rotated MNIST the gate fires on almost every batch, so it saves nothing.
@@ -581,7 +587,8 @@ On corruption suites, whose drift is output-visible, FEATHER does not beat
 the output monitors on false alarms; in the silent regime of
 Sect.~\ref{sec:blinddeep} it is the only effective one. The two are
 complementary: a confidence monitor for visible failures, FEATHER for blind
-ones. Fisher weighting nearly halves the covariance ablation's benign alarms,
+ones. Choosing the subspace by the Fisher spectrum rather than by variance
+nearly halves the covariance ablation's benign alarms,
 since the discarded low-Fisher directions are those the decisions ignore; the
 plain mean shift has fewer benign alarms but a threshold too high to catch
 blind drift before accuracy collapses. Benchmarks
@@ -594,11 +601,10 @@ silent-regime result is semi-synthetic (drift injected in activation space,
 harm from a synthetic rule), and both natural shifts we tested, the WILDS hospital shift and the
 pre-registered subpopulation shift, are output-visible; a natural shift that
 brings in differently labelled inputs whose outputs match the reference
-remains the most valuable next step. A perturbation of a fixed
-input cannot serve: if its outputs and its label are both unchanged, so is
-its correctness. Held-out calibration holds
-the clean false-alarm rate at budget only when the reference data matches the
-deployment stream, as the MNIST CNN's train-to-test activation shift shows.
+remains the most valuable next step. Held-out calibration holds the clean
+false-alarm rate at budget only when the reference data matches the deployment
+stream: calibrated on its training split, FEATHER alarms on every clean MNIST
+test batch, and on $8\%$ once recalibrated on clean test data.
 Finally, the blind subspace belongs to the penultimate layer; an
 intermediate-layer version through a Kronecker-factored Fisher
 \cite{martens2015kfac} would capture drift that vanishes before it.

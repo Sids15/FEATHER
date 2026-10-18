@@ -125,6 +125,7 @@ foreach ($s in 0..4) {
 | Fisher rank structure (9 of 512) | `spectrum_figure.py` |
 | Run-rule (persistence) check | `persistence_rule.py outputs\monitor_cifar10_seed*` |
 | Cascade cost and alarms | `cascade.py` summaries |
+| Per-batch monitor cost (3.0 ms) | `monitor_cost.py outputs\monitor_cifar10_seed0` |
 | 2-D testbed geometry and accuracy | `tests/test_integration_2d.py` |
 
 Scripts that take run folders expect them listed explicitly; in PowerShell pass
