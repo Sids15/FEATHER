@@ -109,16 +109,13 @@ absorbs without loss \cite{rabanser2019failing}. A newer family monitors the
 model's \emph{outputs}: confidence, entropy, or learned error proxies
 (Sect.~\ref{sec:related}).
 
-Our starting point is one structural fact about that second family. Any
-statistic computed from the outputs is blind to any change that leaves them
+Any statistic computed from the outputs is blind to changes that leave them
 unchanged, and for a softmax classifier such changes span nearly all of
 activation space. The Fisher information matrix of the log-likelihood
 with respect to the penultimate activation $\act$ has rank at most $C-1$, so a
 ResNet-18 on CIFAR-10 has outputs that respond to only a $9$-dimensional slice
-of a $512$-dimensional feature space. The other $503$ directions push every
-logit up by the same amount; the softmax undoes it; confidence and entropy
-remain unchanged. Failure caused by drift along these directions is therefore
-silent.
+of a $512$-dimensional feature space. The other $503$ directions shift every
+logit equally, which the softmax cancels, so drift along them is silent.
 
 Output-invisibility and harm are distinct properties. Invisibility belongs to a
 \emph{direction}: a shift along the blind subspace leaves every output
@@ -186,20 +183,16 @@ detection: the Mahalanobis method \cite{lee2018mahalanobis} scores samples
 against class-conditional Gaussians, Rabanser et al.'s strongest detector
 (BBSD) tests the representations \cite{rabanser2019failing}, and Komorniczak
 and Ksieniewicz \cite{komorniczak2024parallel} extract drift signals from
-parallel activation patterns without labels. None of these says \emph{which}
-directions the task cares about; they weight feature space by variance or
-density, never by the effect on the model's decisions. Test-time adaptation
-locates the shift in the representations too: Ma et al.\ \cite{ma2026pea}
-correct mean, variance and covariance shift in intermediate embeddings,
-on-device variants are now benchmarked \cite{danilowski2026botta}, NEO
-\cite{murphy2026neo} re-centers test features by the displacement of the global
-embedding centroid (exactly the full-space mean shift we use as a gate in
-Sect.~\ref{sec:cascade}), and MORPHEUS \cite{danilowski2026morpheus} predicts,
-without labels, how accurate each adaptation method will be from prediction
-entropy and embedding geometry. These methods change the model, or
-choose how to, and none separates the directions the outputs can feel from
-those they cannot; FEATHER leaves the model frozen and only watches the
-output-invisible subspace.
+parallel activation patterns without labels. None of these asks \emph{which}
+directions the model's decisions depend on. Test-time adaptation also works in
+the representations: Ma et al.\ \cite{ma2026pea} correct embedding mean and
+covariance shift, on-device variants are benchmarked
+\cite{danilowski2026botta}, NEO \cite{murphy2026neo} re-centers features by the
+centroid displacement (the full-space mean shift we use as a gate in
+Sect.~\ref{sec:cascade}), and MORPHEUS \cite{danilowski2026morpheus} predicts
+adaptation accuracy from entropy and embedding geometry. These methods change
+the model, or choose how to; none separates the directions the outputs can
+feel from those they cannot.
 
 \runinhead{Fisher geometry.}
 The Fisher matrix enters deep learning mainly through natural gradient
@@ -387,8 +380,7 @@ of subspace); and four output-based baselines: mean max-softmax confidence
 \cite{hendrycks2017baseline}, mean prediction entropy, an ATC-style accuracy
 estimate \cite{garg2022atc}, and a logistic error proxy following Amoukou
 et al.\ \cite{amoukou2024sequential}. We also score the simple full-space mean shift
-$\lVert\Delta\mu_t\rVert$, the representation-space analogue of a two-sample
-test on the feature mean and the centroid displacement NEO \cite{murphy2026neo}
+$\lVert\Delta\mu_t\rVert$, the centroid displacement NEO \cite{murphy2026neo}
 re-centers by; FEATHER is that same mean shift restricted to the blind
 subspace. Every monitor alarms above the 99th percentile of its statistic's
 bootstrap distribution; FEATHER alarms on either of two statistics, so its
