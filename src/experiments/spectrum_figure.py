@@ -58,13 +58,15 @@ def main() -> None:
         fit = json.loads(path.read_text())
         spectra[fit["mode"]].append(fit["fisher_top_eigenvalues"])
         logger.info("loaded %s (%s)", path.name, fit["mode"])
+    # the figure (and its C-1=9 marker) covers the two 10-class benchmarks only
+    spectra = {m: spectra[m] for m in ("cifar10c", "rotated_mnist") if m in spectra}
     if not spectra:
-        raise SystemExit(f"no fit.json files under {args.fits_dir}")
+        raise SystemExit(f"no cifar10c/rotated_mnist fit.json files under {args.fits_dir}")
 
     fig, axes = plt.subplots(1, len(spectra), figsize=(8.4, 3.2), dpi=200)
     fig.patch.set_facecolor(SURFACE)
     axes = np.atleast_1d(axes)
-    for ax, mode in zip(axes, ("cifar10c", "rotated_mnist")):
+    for ax, mode in zip(axes, spectra):
         style_axis(ax)
         runs = spectra[mode]
         indices = np.arange(1, len(runs[0]) + 1)

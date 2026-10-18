@@ -33,7 +33,7 @@ class Synthetic2DConfig:
         batch_size: Samples per stream batch.
         n_batches: Total batches in the stream.
         seed: Seed for the stream's random generator (reproducibility is
-            mandatory, rules.md §2).
+            mandatory).
         mean0: Mean of class 0.
         mean1: Mean of class 1.
         cov: Shared 2x2 covariance matrix (row-major nested tuples).

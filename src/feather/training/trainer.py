@@ -67,7 +67,7 @@ def _numpy_rng_to_safe(state: tuple) -> dict:
 def _numpy_rng_from_safe(state: dict) -> tuple:
     return (
         state["name"],
-        state["keys"].numpy().astype(np.uint32),
+        state["keys"].cpu().numpy().astype(np.uint32),
         state["pos"],
         state["has_gauss"],
         state["cached_gaussian"],
@@ -214,6 +214,9 @@ class Trainer:
                 "numpy": _numpy_rng_to_safe(np.random.get_state()),
                 "torch": torch.get_rng_state(),
                 "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+                # shuffle order: without it a resumed run replays epoch 1's order
+                "loader": self._train_generator.get_state()
+                if getattr(self, "_train_generator", None) is not None else None,
             },
             "model_meta": self.model.meta() if hasattr(self.model, "meta") else None,
             "torch_version": str(torch.__version__),  # plain str, not TorchVersion
@@ -267,6 +270,7 @@ class Trainer:
         torch.set_rng_state(rng["torch"].cpu())
         if rng["cuda"] is not None and torch.cuda.is_available():
             torch.cuda.set_rng_state_all([s.cpu() for s in rng["cuda"]])
+        self._loader_state = rng["loader"].cpu() if rng.get("loader") is not None else None
         self.start_epoch = payload["epoch"] + 1
         logger.info(
             "resumed from %s (epoch %d done, best_val_acc=%.4f); continuing at epoch %d",
@@ -278,6 +282,10 @@ class Trainer:
     def _loader(self, dataset: Dataset, shuffle: bool) -> DataLoader:
         generator = torch.Generator()
         generator.manual_seed(self.config.seed)
+        if shuffle:
+            if getattr(self, "_loader_state", None) is not None:
+                generator.set_state(self._loader_state)
+            self._train_generator = generator
         return DataLoader(
             dataset,
             batch_size=self.config.batch_size,

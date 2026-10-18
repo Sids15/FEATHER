@@ -40,12 +40,11 @@ paper/                  journal manuscript (Springer SNmult)
   main_full_22pp.tex      full manuscript
 paper-conference/       conference versions; ACM-Journal/ is the full paper in acmart
 docs/                   datasets, training guide, experiment designs
-rules.md                project rules (environment, code quality, git)
 ```
 
 ## Setup
 
-Python 3.10+ in a virtual environment (see `rules.md` §1).
+Python 3.10+ in a virtual environment.
 
 ```powershell
 py -m venv .venv
@@ -187,6 +186,5 @@ calibrated budget:
 ## Development
 
 - Run `python -m pytest` before every commit that touches `src/`.
-- Every commit ends with `Co-authored-by: rishabhahuja12 <rishabhahuja961@gmail.com>`
-  (`rules.md` §5).
+- Every commit ends with `Co-authored-by: rishabhahuja12 <rishabhahuja961@gmail.com>`.
 - Every number in the paper must trace to a script in `src/experiments/`.

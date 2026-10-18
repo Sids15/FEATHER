@@ -2,7 +2,7 @@
 
 The data root is resolved, in priority order, from (1) an explicit override
 argument, (2) the ``FEATHER_DATA_DIR`` environment variable, (3) ``./data``.
-Code never downloads datasets (rules.md §3) — every missing-path error points
+Code never downloads datasets — every missing-path error points
 to docs/datasets.md instead.
 """
 

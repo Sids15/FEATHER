@@ -32,9 +32,10 @@ import numpy as np
 
 from feather.core.monitor import MonitorConfig, SubspaceDriftMonitor
 
+from analyze_monitoring import CLEAN_EPISODE
+
 logger = logging.getLogger("feather.experiments.symmetric")
 
-CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00"}
 BENIGN_MAX_DROP = 0.02
 HARMFUL_MIN_DROP = 0.10
 

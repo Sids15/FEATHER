@@ -118,6 +118,17 @@ class TestCheckpointing:
         for a, b in zip(first.model.parameters(), resumed.model.parameters()):
             assert torch.equal(a, b)
 
+    def test_resumed_run_matches_uninterrupted_run(self, tmp_path):
+        torch.manual_seed(0)
+        straight = make_trainer(tmp_path, run_name="straight", epochs=4)
+        straight.fit()
+        torch.manual_seed(0)
+        make_trainer(tmp_path, run_name="split", epochs=2).fit()
+        resumed = make_trainer(tmp_path, run_name="split", epochs=4)
+        resumed.fit(resume="auto")
+        for a, b in zip(straight.model.parameters(), resumed.model.parameters()):
+            assert torch.equal(a, b)
+
     def test_resume_auto_without_checkpoints_errors(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             make_trainer(tmp_path).fit(resume="auto")

@@ -33,6 +33,8 @@ import numpy as np
 from feather.baselines import fit_output_baselines, score_output_baselines
 from feather.core.monitor import MonitorConfig, SubspaceDriftMonitor
 
+from analyze_monitoring import CLEAN_EPISODE
+
 logger = logging.getLogger("feather.experiments.refit")
 
 _BASELINE_COLUMNS = [
@@ -58,7 +60,6 @@ def _batch_slices(rows: list[dict]) -> list[slice]:
     return slices
 
 
-_CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00", "breeds_cifar100": "clean"}
 
 
 def refit_run(run_dir: Path, quantile: float | None = None,
@@ -89,7 +90,7 @@ def refit_run(run_dir: Path, quantile: float | None = None,
     )
     calibration = np.load(raw_dir / "calibration.npz")
     if baseline_calibration == "clean-heldout":
-        clean_name = _CLEAN_EPISODE[fit["mode"]]
+        clean_name = CLEAN_EPISODE[fit["mode"]]
         clean = np.load(raw_dir / f"episode_{clean_name}.npz")
         half = len(clean["labels"]) // 2  # first half calibrates, rest is evaluated
         base_logits, base_labels = clean["logits"][:half], clean["labels"][:half]
@@ -102,8 +103,10 @@ def refit_run(run_dir: Path, quantile: float | None = None,
         arrays = np.load(raw_dir / "monitor.npz")
         phi = calibration["phi"].astype(np.float64)
         monitors = {
-            "feather": SubspaceDriftMonitor(arrays["blind_basis"].astype(np.float64), phi, config),
-            "pca": SubspaceDriftMonitor(arrays["pca_basis"].astype(np.float64), phi, config),
+            # float32-saved bases fail the 1e-8 orthonormality check; QR restores
+            # it without changing the subspace
+            "feather": SubspaceDriftMonitor(np.linalg.qr(arrays["blind_basis"].astype(np.float64))[0], phi, config),
+            "pca": SubspaceDriftMonitor(np.linalg.qr(arrays["pca_basis"].astype(np.float64))[0], phi, config),
         }
 
     csv_path = run_dir / "episodes.csv"

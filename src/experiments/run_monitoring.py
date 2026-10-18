@@ -192,8 +192,8 @@ def main() -> None:
         )
         np.savez_compressed(
             raw_dir / "monitor.npz",
-            blind_basis=bundle.feather.basis.astype(np.float32),
-            pca_basis=bundle.pca.basis.astype(np.float32),
+            blind_basis=bundle.feather.basis.astype(np.float64),
+            pca_basis=bundle.pca.basis.astype(np.float64),
             weight=weight.astype(np.float32),
             bias=bias.astype(np.float32),
         )
