@@ -124,27 +124,21 @@ logit up by the same amount; the softmax undoes it; confidence and entropy
 remain unchanged. Failure caused by drift along these directions is therefore
 silent.
 
-Two properties must be distinguished at the outset, since conflating them is a
-common error. Output-invisibility is a property of a \emph{direction}: a shift
-along the blind subspace leaves every output statistic exactly where it was.
-Harm is a separate and measurable property --- the accuracy the model actually
-loses on held-out labels. These are not the same set. A blind-subspace shift can
-be entirely benign, and, conversely, a change in the label function with frozen
-features can reduce accuracy while producing no shift for FEATHER to detect. What the subspace
-guarantees is the one implication that matters operationally: \emph{if} harmful
+Output-invisibility and harm are distinct properties. Invisibility belongs to a
+\emph{direction}: a shift along the blind subspace leaves every output
+statistic unchanged. Harm is the accuracy the model actually loses on held-out
+labels. A blind-subspace shift can be benign, and a change in the label
+function with frozen features can reduce accuracy without any shift for
+FEATHER to detect. The subspace guarantees one implication: \emph{if} harmful
 drift lands there, no output-based monitor can see it. FEATHER covers that
-structural blind spot and raises a calibrated signal; whether a particular
-movement is actually harmful we \emph{measure} from held-out labels
-(Sect.~\ref{sec:experiments}) rather than read off the geometry. No label-free
-monitor can certify harm on its own, and we do not claim one can.
+blind spot with a calibrated signal; whether a movement is harmful we
+\emph{measure} from held-out labels (Sect.~\ref{sec:experiments}). No
+label-free monitor can certify harm on its own.
 
 FEATHER (Fisher-Eigenvalue Adaptive Thresholding for Error-Robust drift
 detection) monitors that region directly: offline, one pass over a labeled
 held-out set gives the Fisher matrix in closed form; online, a batch costs one
-projection. The contributions form a chain: the blind subspace
-exists by construction, output-based monitors cannot observe it, FEATHER
-monitors it directly, and we then \emph{measure} whether drift within it is
-harmful and whether monitoring it is inexpensive enough to run continuously.
+projection. Our contributions are:
 \begin{enumerate}
   \item{An impossibility result (Proposition~\ref{prop:blind}): the blind
     subspace is exactly the set of softmax-invariant directions, so drift kept
@@ -154,8 +148,7 @@ harmful and whether monitoring it is inexpensive enough to run continuously.
   \item{An evaluation in which harm is \emph{measured} from held-out labels:
     Rotated MNIST and CIFAR-10-C against output-based baselines and a
     covariance ablation, a deep-feature experiment that exposes the blind spot
-    on a trained ResNet-18, and natural hospital-to-hospital shift on WILDS
-    Camelyon17.}
+    on a trained ResNet-18, and two natural shifts with real labels.}
   \item{A two-stage cascade that runs FEATHER only on batches flagged by an
     inexpensive full-space shift gate.}
 \end{enumerate}
@@ -176,7 +169,7 @@ classifier-based tests (the covariate/label/concept taxonomy is set out in
 but by construction they say nothing about performance. Rabanser et al.\
 \cite{rabanser2019failing} showed that how strongly a shift is detected and how
 much damage it does line up poorly, and left \emph{harmful} shift as an open
-problem. This paper addresses that gap.
+problem.
 
 \runinhead{Confidence and label-free accuracy estimation.}
 The maximum-softmax-probability baseline \cite{hendrycks2017baseline}
@@ -207,11 +200,10 @@ on-device variants are now benchmarked \cite{danilowski2026botta}, NEO
 embedding centroid (exactly the full-space mean shift we use as a gate in
 Sect.~\ref{sec:cascade}), and MORPHEUS \cite{danilowski2026morpheus} predicts,
 without labels, how accurate each adaptation method will be from prediction
-entropy and embedding geometry. These methods \emph{change} the model, or
+entropy and embedding geometry. These methods change the model, or
 choose how to, and none separates the directions the outputs can feel from
-those they cannot: a centroid moves whichever way the drift goes, and an
-entropy term is an output statistic. FEATHER leaves the frozen model untouched
-and only \emph{watches} the output-invisible subspace.
+those they cannot; FEATHER leaves the model frozen and only watches the
+output-invisible subspace.
 
 \runinhead{Fisher geometry.}
 The Fisher matrix enters deep learning mainly through natural gradient
@@ -221,9 +213,7 @@ eigenvalues \cite{karakida2019universal}, a split that is exact in our
 activation-space version. Zhang et al.\ \cite{zhang2023score} chart the
 parameter-space Fisher score vector, which requires labels, and Zero-Direction
 Probing \cite{pandey2025zdp} studies null directions of activations without a
-task-supervised Fisher or a harmful/benign split. FEATHER combines the harmful-shift problem of
-\cite{amoukou2024sequential} with the null-direction geometry of
-\cite{pandey2025zdp}, which each address separately.
+task-supervised Fisher or a harmful/benign split.
 
 \section{Problem Setup}
 \label{sec:setup}
@@ -245,10 +235,8 @@ activation displacement lies in the blind subspace $\mathcal{N}$
 (Sect.~\ref{sec:blind}), so that every output statistic is pointwise
 unchanged; it is \emph{harmful} when it lowers accuracy on held-out labels past
 a fixed margin and \emph{benign} when it does not (margins in
-Sect.~\ref{sec:experiments}). FEATHER targets the intersection --- drift that
-is output-invisible \emph{and} harmful, the one regime no output-based monitor
-can enter --- and whether blind-subspace drift is in fact harmful we measure
-rather than assume.
+Sect.~\ref{sec:experiments}). FEATHER targets drift that is output-invisible
+\emph{and} harmful, the one regime no output-based monitor can enter.
 
 \section{The FEATHER Monitor}
 \label{sec:method}
@@ -342,15 +330,11 @@ full rank $C-1$ in every run.
 \end{assumption}
 
 In a rank-deficient head ($\rank W < C-1$) the sensitive subspace only shrinks
-and the blind subspace only grows. The assumption can fail in one practical
-way: under severe class imbalance, or a class absent from the reference set,
-the residuals $\{e_{y_i} - p_i\}$ span only a proper subspace of $\mathcal{H}$,
-the empirical rank falls below $C-1$, and $\mathcal{N}$ becomes a
-\emph{superset} of the softmax-invariant set below. For monitoring this is
-conservative rather than wrong: every truly output-invisible direction still
-lies in $\mathcal{N}$, so no blind drift is missed, and the extra directions
-are output-visible ones the output baselines already cover. Keeping all $C$
-classes in the reference set restores $\mathcal{N}$ exactly.
+and the blind subspace only grows. If a class is absent from, or very rare in,
+the reference set, the empirical rank falls below $C-1$ and $\mathcal{N}$
+becomes a \emph{superset} of the softmax-invariant set below. This is
+conservative: no blind direction is missed, and the extra directions are
+output-visible ones the output baselines already cover.
 
 \begin{proposition}[Detector blindness]
 \label{prop:blind}
@@ -375,12 +359,8 @@ by input, hence so is any functional of them. \qed
 \end{proof}
 
 Proposition~\ref{prop:blind} is an impossibility result about output-based
-monitoring; it is not a promise that blind drift is harmful. The blind region is
-hazardous because the model cannot respond to change within it, so if
-the label function or the upstream feature extractor moves along one of those
-directions, the outputs give no indication of it. Whether blind-subspace
-movement is in fact associated with harm is an empirical question, and
-Sect.~\ref{sec:experiments} measures it instead of assuming it.
+monitoring, not a claim that blind drift is harmful; Sect.~\ref{sec:experiments}
+measures harm instead of assuming it.
 
 \section{Experiments}
 \label{sec:experiments}
@@ -425,11 +405,9 @@ $|\cos| > 1 - 10^{-6}$. Blind drift of four standard deviations moves the
 outputs by less than $10^{-10}$ and leaves the accuracy of the frozen Bayes
 classifier unchanged ($93.3\%$ before, $93.2\%$ after), yet is flagged on all 15
 post-onset batches; sensitive drift, which cuts accuracy to $53.5\%$, is not
-flagged and is left to the output monitors that can see it. Here $\act = x$ has
-no feature extractor, so blind drift is benign by construction: the testbed
-checks the geometry and the detector, not harm, and shows that FEATHER flags
-output-invisible drift whether or not it is harmful. This is why harm is
-measured separately (Sect.~\ref{sec:blinddeep}). On the
+flagged and is left to the output monitors. Here $\act = x$, so blind drift is
+benign by construction: the testbed checks the geometry and the detector, not
+harm, which is measured separately (Sect.~\ref{sec:blinddeep}). On the
 trained networks the rank bound (\ref{eq:rank}) appears exactly: in all ten
 runs, exactly nine eigenvalues clear machine precision, and on a representative
 CIFAR-10 seed $\lambda_9 = 9.1 \times 10^{-5}$ while
@@ -440,11 +418,9 @@ threshold across fourteen decades.
 \subsection{Blind-Subspace Shift Tracks Measured Harm}
 \label{sec:saturation}
 
-On Rotated MNIST accuracy slides from 99\% to 13\% as the angle opens up, and
-the FEATHER score climbs monotonically alongside it. On CIFAR-10-C
-(Fig.~\ref{fig:cifar}) the blind-shift score and the measured accuracy drop
-move together tightly enough that the three harm classes stack up almost
-cleanly. At the episode level, though, these benchmarks do not separate the
+On Rotated MNIST accuracy falls from 99\% to 13\% as the angle grows, and the
+FEATHER score rises monotonically with it. On CIFAR-10-C (Fig.~\ref{fig:cifar})
+the blind-shift score tracks the measured accuracy drop. At the episode level, though, these benchmarks do not separate the
 detectors: FEATHER, the covariance ablation, and the confidence and entropy
 baselines all pull harmful from benign at AUROC $1.0$ on both benchmarks and
 every seed. Standard corruption suites produce \emph{output-visible} drift, the
@@ -573,18 +549,14 @@ FEATHER & $0.02$ & $0.48$ & $1.00$ & $1.00$ \\
 \runinhead{Hospital shift.} To test a real distribution shift with real labels we use WILDS Camelyon17
 \cite{koh2021wilds}, a binary tumour-vs-normal patch task whose domains are
 hospitals. A ResNet-18 trained on the in-distribution hospitals ($98.8\%$
-validation accuracy) is monitored as the two held-out hospitals stream in. The task is
-binary, so the rank bound predicts $\rank\F \le 1$, and the trained network
-confirms it: a single Fisher eigenvalue near $1.5\times10^{-2}$ and a cliff to
-$\sim10^{-18}$ beneath it, leaving a blind subspace of $511$ of $512$
-dimensions. The hospital shift does real harm --- accuracy falls from $99.0\%$
+validation accuracy) is monitored as the two held-out hospitals stream in. As
+the rank bound predicts for a binary task, one Fisher eigenvalue
+($1.5\times10^{-2}$) sits above a cliff to $\sim10^{-18}$, leaving $511$ of
+$512$ dimensions blind. The hospital shift does real harm --- accuracy falls from $99.0\%$
 in distribution to $69.5\%$ and $58.5\%$ on the two out-of-domain hospitals ---
 and FEATHER tracks it, remaining at its $1\%$ budget in distribution and alarming
 on every batch of both shifted hospitals. The output baselines alarm on all
-shifted batches too: stain and morphology changes are output-\emph{visible},
-so Camelyon17 gives FEATHER no
-exclusive advantage; it shows that on naturally occurring shift FEATHER
-follows measured harm and holds its budget.
+shifted batches too: stain and morphology changes are output-visible.
 
 \runinhead{Subpopulation shift.} Harm with unchanged outputs requires new
 inputs with their own labels, so we pre-registered a BREEDS-style shift
@@ -611,9 +583,8 @@ forward pass. The offline cost, $O(nd^2 + d^3)$, remains seconds at $d \approx 4
 randomized eigensolvers \cite{halko2011structure} extend it further. FEATHER's statistic is the blind part of the
 full-space shift $\lVert\Delta\mu\rVert$, so the full-space shift is a less costly
 gate that responds to any drift, blind or visible; we calibrate it like
-FEATHER and run the projection only when it alarms. A confidence-based gate is unsuitable,
-since by Proposition~\ref{prop:blind} it would never call FEATHER on blind
-drift. On CIFAR-10-C (five seeds) the cascade matches FEATHER-always on harmful
+FEATHER and run the projection only when it alarms (a confidence gate would,
+by Proposition~\ref{prop:blind}, never call FEATHER on blind drift). On CIFAR-10-C (five seeds) the cascade matches FEATHER-always on harmful
 episodes at zero added delay ($0.80$ vs.\ $0.82$ of batches), runs the
 projection on only $16\%$ of benign batches while alarming on $16\%$ against
 $40\%$, and on clean data neither runs nor alarms. On Rotated MNIST it yields no
@@ -631,10 +602,9 @@ covariance ablation, Fisher weighting nearly halves the benign false alarms,
 because the low-Fisher directions FEATHER discards are precisely those the
 model's decisions do not depend on. Against the plain mean shift the trade-off
 runs the other way: fewer benign alarms, bought with a threshold too high to
-catch harmful blind drift until accuracy has largely collapsed. Since every
-detector reaches AUROC $1.0$ on
-both suites, these benchmarks cannot rank label-free monitors; benchmarks that
-include the silent regime by design are needed.
+catch harmful blind drift until accuracy has largely collapsed. Benchmarks
+that include the silent regime by design are needed to rank label-free
+monitors.
 
 The limitations are equally specific. Pure concept shift that leaves the activation
 marginals alone is invisible to every label-free method, ours included. The
