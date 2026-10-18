@@ -147,29 +147,29 @@ def figure(rows: list[dict], out: Path) -> None:
     def series(col):
         return np.array([np.mean([r[col] for r in by_alpha[a]]) for a in alphas])
 
-    fig, ax = plt.subplots(figsize=(6.6, 4.2), dpi=200)
+    # drawn at its printed size (6.8 cm side-caption figure); the caption carries the title
+    fig, ax = plt.subplots(figsize=(3.2, 2.6), dpi=300)
     fig.patch.set_facecolor(SURFACE); ax.set_facecolor(SURFACE)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     for side in ("left", "bottom"):
         ax.spines[side].set_color("#c3c2b7")
     ax.grid(True, color=GRID, linewidth=0.6); ax.set_axisbelow(True)
-    ax.tick_params(colors=MUTED, labelsize=8)
+    ax.tick_params(colors=MUTED, labelsize=7)
 
-    ax.plot(alphas, series("feather_alarm_rate"), color=VIOLET, linewidth=2.2,
-            marker="o", markersize=4, label="FEATHER alarm rate")
-    ax.plot(alphas, series("meanshift_alarm_rate"), color=MUTED, linewidth=1.8,
-            linestyle=":", marker="D", markersize=3.5, label="full-space mean-shift alarm rate")
-    ax.plot(alphas, series("max_output_prob_change"), color=RED, linewidth=2.2,
-            marker="s", markersize=4, label="max output-prob change")
-    ax.plot(alphas, 1.0 - series("hidden_label_accuracy"), color=BLUE, linewidth=2.0,
-            linestyle="--", marker="^", markersize=4, label="synthetic-rule error")
-    ax.set_xlabel("blind-subspace shift magnitude  α", color=SECONDARY, fontsize=9)
-    ax.set_ylabel("rate", color=SECONDARY, fontsize=9)
-    ax.set_title("CIFAR-10 ResNet-18: blind-subspace drift is output-invisible,\n"
-                 "FEATHER-visible, and (under a synthetic rule) harmful",
-                 color=INK, fontsize=10)
-    ax.legend(loc="center right", fontsize=8, frameon=False, labelcolor=SECONDARY)
+    ax.plot(alphas, series("feather_alarm_rate"), color=VIOLET, linewidth=1.4,
+            marker="o", markersize=2.5, label="FEATHER alarm rate")
+    ax.plot(alphas, series("meanshift_alarm_rate"), color=MUTED, linewidth=1.2,
+            linestyle=":", marker="D", markersize=2.2, label="mean-shift alarm rate")
+    ax.plot(alphas, series("max_output_prob_change"), color=RED, linewidth=1.4,
+            marker="s", markersize=2.5, label="max output change")
+    ax.plot(alphas, 1.0 - series("hidden_label_accuracy"), color=BLUE, linewidth=1.3,
+            linestyle="--", marker="^", markersize=2.5, label="synthetic-rule error")
+    ax.set_xlabel("blind-subspace shift magnitude  α", color=SECONDARY, fontsize=8)
+    ax.set_ylabel("rate", color=SECONDARY, fontsize=8)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=6.5,
+              frameon=False, labelcolor=SECONDARY, handlelength=1.6,
+              handletextpad=0.3, columnspacing=0.8, borderaxespad=0.1)
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, facecolor=SURFACE); plt.close(fig)

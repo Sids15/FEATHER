@@ -210,22 +210,24 @@ def style_axis(ax: plt.Axes) -> None:
 
 def figure_cifar(rows: list[dict], out: Path) -> None:
     """Accuracy drop vs. FEATHER score, every CIFAR-10-C episode and seed."""
-    fig, ax = plt.subplots(figsize=(6.4, 4.2), dpi=200)
+    # drawn at its printed size (6.8 cm side-caption figure) so text stays legible;
+    # the caption carries the title
+    fig, ax = plt.subplots(figsize=(3.2, 2.3), dpi=300)
     fig.patch.set_facecolor(SURFACE)
     style_axis(ax)
+    ax.tick_params(labelsize=7)
     for label in ("benign", "gray", "harmful"):
         subset = [r for r in rows if r["label"] == label]
         ax.scatter(
             [100 * r["acc_drop"] for r in subset],
             [r["feather"] for r in subset],
-            s=14, color=LABEL_COLOR[label], alpha=0.65, linewidths=0,
+            s=6, color=LABEL_COLOR[label], alpha=0.65, linewidths=0,
             label=f"{label} ({len(subset)})",
         )
-    ax.set_xlabel("measured accuracy drop (points)", color=SECONDARY, fontsize=9)
-    ax.set_ylabel(r"FEATHER blind-shift score $\Delta m$", color=SECONDARY, fontsize=9)
-    ax.set_title("CIFAR-10-C: blind-subspace shift tracks measured harm "
-                 "(96 episodes x 5 seeds)", color=INK, fontsize=10)
-    ax.legend(loc="lower right", fontsize=8, frameon=False, labelcolor=SECONDARY)
+    ax.set_xlabel("measured accuracy drop (points)", color=SECONDARY, fontsize=8)
+    ax.set_ylabel(r"blind-shift score $\Delta m$", color=SECONDARY, fontsize=8)
+    ax.legend(loc="lower right", fontsize=7, frameon=False, labelcolor=SECONDARY,
+              handletextpad=0.2, borderaxespad=0.2)
     fig.tight_layout()
     fig.savefig(out, facecolor=SURFACE)
     plt.close(fig)

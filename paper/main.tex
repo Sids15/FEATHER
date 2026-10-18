@@ -44,10 +44,11 @@
 
 \title*{FEATHER: Fisher-Eigenvalue Adaptive Thresholding for Error-Robust Drift Detection}
 \titlerunning{FEATHER: Fisher-Eigenvalue Adaptive Thresholding}
-\author{\todo{Name of First Author} and \todo{Name of Second Author}}
-\authorrunning{\todo{F. Author and S. Author}}
-\institute{\todo{Name of First Author} \at \todo{Name, Address of Institute}, \email{\todo{name@email.address}}
-\and \todo{Name of Second Author} \at \todo{Name, Address of Institute}, \email{\todo{name@email.address}}}
+\author{Rishabh Ahuja, Siddhant Bandi and Shruti Sharma}
+\authorrunning{R. Ahuja, S. Bandi and S. Sharma}
+\institute{Rishabh Ahuja \at \todo{Department, College/University, City, Country}, \email{\todo{email}}
+\and Siddhant Bandi \at \todo{Department, College/University, City, Country}, \email{\todo{email}}
+\and Shruti Sharma \at \todo{Department, College/University, City, Country}, \email{\todo{email}}}
 
 \maketitle
 
@@ -66,8 +67,9 @@ a covariance ablation (48\% vs.\ 83\% on CIFAR-10-C). A shift built inside the b
 subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
-WILDS Camelyon17 FEATHER follows real hospital-to-hospital harm, and a
-two-stage cascade cuts its online cost.
+WILDS Camelyon17 and a pre-registered CIFAR-100 subpopulation shift FEATHER
+follows real harm, which the outputs also see; a two-stage cascade cuts its
+online cost.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -86,8 +88,9 @@ a covariance ablation (48\% vs.\ 83\% on CIFAR-10-C). A shift built inside the b
 subspace of the trained ResNet-18 changes no softmax output by more than
 $10^{-10}$, yet drops a synthetic accuracy from $99\%$ to $7\%$; FEATHER
 detects it on every batch while the output baselines register no change. On
-WILDS Camelyon17 FEATHER follows real hospital-to-hospital harm, and a
-two-stage cascade cuts its online cost.
+WILDS Camelyon17 and a pre-registered CIFAR-100 subpopulation shift FEATHER
+follows real harm, which the outputs also see; a two-stage cascade cuts its
+online cost.
 \keywords{Concept drift $\cdot$ Dataset shift $\cdot$ Fisher information
 $\cdot$ Model monitoring $\cdot$ Label-free evaluation}}
 
@@ -146,7 +149,7 @@ projection. Our contributions are:
     inexpensive full-space shift gate.}
 \end{enumerate}
 
-\section{Related Work}
+\section{Literature Review}
 \label{sec:related}
 
 \runinhead{Drift detection as change detection.}
@@ -157,8 +160,9 @@ systems, all implemented in River \cite{montiel2021river}. These
 error-rate detectors tie alarms to performance but require labels, which a
 stream does not provide \cite{gama2014survey, lu2018learning}. Distribution-level tests sidestep labels
 with kernel two-sample statistics such as MMD \cite{gretton2012kernel} or
-classifier-based tests (the covariate/label/concept taxonomy is set out in
-\cite{quinonero2009dataset}, label-shift estimation in \cite{lipton2018label}),
+classifier-based tests (see Qui\~{n}onero-Candela et al.\ \cite{quinonero2009dataset}
+for the covariate/label/concept taxonomy and Lipton et al.\ \cite{lipton2018label}
+for label-shift estimation),
 but by construction they say nothing about performance. Rabanser et al.\
 \cite{rabanser2019failing} showed that how strongly a shift is detected and how
 much damage it does line up poorly, and left \emph{harmful} shift as an open
@@ -230,7 +234,7 @@ a fixed margin and \emph{benign} when it does not (margins in
 Sect.~\ref{sec:experiments}). FEATHER targets drift that is output-invisible
 \emph{and} harmful, the one regime no output-based monitor can enter.
 
-\section{The FEATHER Monitor}
+\section{Methodology: The FEATHER Monitor}
 \label{sec:method}
 
 \subsection{The Activation-Space Fisher Matrix and Its Blind Subspace}
@@ -347,7 +351,7 @@ $u \in \mathcal{N}$ iff $(Wu)^\top v = 0$ for all $v \in \mathcal{H}$, i.e.\
 iff $Wu \in \mathcal{H}^\perp = \spn\{\mathbf{1}\}$. For such $u$,
 $W(\act + tu) + b = (W\act + b) + tc\,\mathbf{1}$ for some $c$, and by
 (\ref{eq:invariance}) the softmax is unchanged. Outputs are unchanged input
-by input, hence so is any functional of them. \qed
+by input, hence so is any functional of them.
 \end{proof}
 
 Proposition~\ref{prop:blind} is an impossibility result about output-based
@@ -356,7 +360,7 @@ measures harm instead of assuming it. It also shows that $\mathcal{N}$ is fixed
 by $W$ alone; computing it through $\F$ checks the rank structure on the
 trained model.
 
-\section{Experiments}
+\section{Experimental Results}
 \label{sec:experiments}
 
 \runinhead{Models and data.}
@@ -381,8 +385,8 @@ FEATHER; a covariance ablation (the same pipeline with $\F$ swapped for the
 activation covariance at the same blind dimension, which isolates the choice
 of subspace); and four output-based baselines: mean max-softmax confidence
 \cite{hendrycks2017baseline}, mean prediction entropy, an ATC-style accuracy
-estimate \cite{garg2022atc}, and a logistic error proxy after
-\cite{amoukou2024sequential}. We also score the simple full-space mean shift
+estimate \cite{garg2022atc}, and a logistic error proxy following Amoukou
+et al.\ \cite{amoukou2024sequential}. We also score the simple full-space mean shift
 $\lVert\Delta\mu_t\rVert$, the representation-space analogue of a two-sample
 test on the feature mean and the centroid displacement NEO \cite{murphy2026neo}
 re-centers by; FEATHER is that same mean shift restricted to the blind
