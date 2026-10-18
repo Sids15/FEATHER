@@ -90,3 +90,18 @@ def test_sensitive_drift_barely_projects_onto_blind_monitor(setup):
     post_onset = [b for b in Synthetic2DStream(cfg, drift) if b.index >= 15]
     ratios = [monitor.score(b.x).direction_ratio for b in post_onset]
     assert np.mean(ratios) < 0.2
+
+
+def test_blind_drift_is_benign_and_sensitive_drift_harmful_in_toy(setup):
+    # Paper Sect. 5.1: in the linear toy (phi = x) blind drift cannot cost
+    # accuracy, while sensitive drift does; harm must be measured, not inferred.
+    cfg, w, weight, bias, *_ = setup
+
+    def post_onset_accuracy(drift):
+        batches = [b for b in Synthetic2DStream(cfg, drift) if b.index >= 15]
+        return np.mean([(softmax(b.x @ weight.T + bias).argmax(1) == b.y).mean()
+                        for b in batches])
+
+    clean = post_onset_accuracy(DriftSpec(kind="none"))
+    assert post_onset_accuracy(benign_drift(cfg, magnitude=4.0, onset=15)) == pytest.approx(clean, abs=0.01)
+    assert post_onset_accuracy(harmful_drift(cfg, magnitude=3.0, onset=15)) < clean - 0.3

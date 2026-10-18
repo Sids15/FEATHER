@@ -35,6 +35,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+from feather.cascade import calibrate_shift_gate
 from feather.core.monitor import MonitorConfig, SubspaceDriftMonitor
 
 logger = logging.getLogger("feather.experiments.blind_deep")
@@ -78,6 +79,10 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
     config = MonitorConfig(batch_size=batch_size, n_bootstrap=500, quantile=0.99, seed=0)
     feather = SubspaceDriftMonitor(blind_basis, phi_all, config)
     pca = SubspaceDriftMonitor(pca_basis, phi_all, config)
+    # reviewer baseline: plain full-space mean shift ||mu_t - mu_ref||, same
+    # calibration data, batch size, bootstrap count, quantile and seed
+    mu_ref = phi_all.mean(axis=0)
+    ms_threshold = calibrate_shift_gate(phi_all, mu_ref, batch_size, 500, 0.99, 0)
 
     u_blind = blind_basis[:, 0] / np.linalg.norm(blind_basis[:, 0])
     u_sens = sensitive_direction(blind_basis, seed)
@@ -94,7 +99,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
     for direction, u in (("blind", u_blind), ("sensitive", u_sens)):
         blind_component = float(u @ u_blind)  # how far the shift moves the blind coord
         for alpha in alphas:
-            confs, ents, maxdp, f_alarms, p_alarms, hidden_acc = [], [], [], [], [], []
+            confs, ents, maxdp, f_alarms, p_alarms, ms_alarms, hidden_acc = [], [], [], [], [], [], []
             for _ in range(n_batches):
                 idx = rng.integers(0, len(phi_all), size=batch_size)
                 phi = phi_all[idx]
@@ -106,6 +111,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
                 ents.append(float(now["entropy"].mean() - base["entropy"].mean()))
                 f_alarms.append(int(feather.score(shifted).alarm))
                 p_alarms.append(int(pca.score(shifted).alarm))
+                ms_alarms.append(int(np.linalg.norm(shifted.mean(axis=0) - mu_ref) > ms_threshold))
                 # hidden-label accuracy: predictions are frozen under blind drift,
                 # but the true label flips once the shifted blind coordinate leaves
                 # the clean tail, so accuracy falls while outputs do not move
@@ -120,6 +126,7 @@ def run_seed(run_dir: Path, batch_size: int, alphas: np.ndarray,
                 "mean_entropy_change": float(f"{np.mean(ents):.3e}"),
                 "feather_alarm_rate": round(float(np.mean(f_alarms)), 4),
                 "pca_alarm_rate": round(float(np.mean(p_alarms)), 4),
+                "meanshift_alarm_rate": round(float(np.mean(ms_alarms)), 4),
                 "hidden_label_accuracy": round(float(np.mean(hidden_acc)), 4),
             })
     return rows
@@ -146,6 +153,8 @@ def figure(rows: list[dict], out: Path) -> None:
 
     ax.plot(alphas, series("feather_alarm_rate"), color=VIOLET, linewidth=2.2,
             marker="o", markersize=4, label="FEATHER alarm rate")
+    ax.plot(alphas, series("meanshift_alarm_rate"), color=MUTED, linewidth=1.8,
+            linestyle=":", marker="D", markersize=3.5, label="full-space mean-shift alarm rate")
     ax.plot(alphas, series("max_output_prob_change"), color=RED, linewidth=2.2,
             marker="s", markersize=4, label="max output-prob change")
     ax.plot(alphas, 1.0 - series("hidden_label_accuracy"), color=BLUE, linewidth=2.0,
@@ -201,6 +210,7 @@ def main() -> None:
             "mean_entropy_change": float(f'{np.mean([r["mean_entropy_change"] for r in sel]):.3e}'),
             "feather_alarm_rate": round(float(np.mean([r["feather_alarm_rate"] for r in sel])), 4),
             "pca_alarm_rate": round(float(np.mean([r["pca_alarm_rate"] for r in sel])), 4),
+            "meanshift_alarm_rate": round(float(np.mean([r["meanshift_alarm_rate"] for r in sel])), 4),
             "hidden_label_accuracy": round(float(np.mean([r["hidden_label_accuracy"] for r in sel])), 4),
         }
     (out_dir / "blind_deep_summary.json").write_text(json.dumps(summary, indent=2))
