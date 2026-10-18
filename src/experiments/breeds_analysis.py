@@ -14,6 +14,10 @@ Criteria were fixed before any data was collected (docs/breeds-design.md):
 All monitors use the same 1% calibrated budget. The full-space mean shift is
 recovered from FEATHER's logs exactly as in meanshift_baseline.py.
 
+Output baselines must first be calibrated on held-out clean deployment data,
+as for every other result in the paper (the training split is memorized):
+
+    python src/experiments/refit_baselines.py --baseline-calibration clean-heldout --runs outputs/monitor_breeds_seed*
     python src/experiments/breeds_analysis.py outputs/monitor_breeds_seed*
 """
 
@@ -53,6 +57,8 @@ def main() -> None:
         sys.exit(__doc__)
     rows = []
     for d in dirs:
+        if json.loads((d / "fit.json").read_text()).get("baseline_calibration") != "clean-heldout":
+            sys.exit(f"{d}: run refit_baselines.py --baseline-calibration clean-heldout first")
         _, r, check = score_run(d)
         s = blind_fraction(d)
         for row in r:

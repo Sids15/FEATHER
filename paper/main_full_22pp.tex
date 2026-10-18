@@ -980,6 +980,28 @@ OOD hospital 2 & $0.59$ & $1.00$ & $1.00$ & $1.00$ \\
 \end{tabular}
 \end{table}
 
+\subsection{Natural Subpopulation Shift}
+\label{sec:breeds}
+
+Harm with unchanged outputs requires new inputs with their own labels
+(Sect.~\ref{sec:limitations}), so we pre-registered a BREEDS-style subpopulation
+shift \cite{santurkar2021breeds}. A ResNet-18 is trained on the 20 CIFAR-100
+superclasses using four of the five subclasses of each ($83.1 \pm 0.7\%$ test
+accuracy over five seeds; a blind subspace of $493$ of $512$ dimensions), and
+each stream batch then draws a fraction $\rho$ of its images from the held-out
+subclasses. The pre-registered criterion --- an accuracy drop of at least ten
+points that FEATHER flags while every output baseline stays below $20\%$ alarms
+--- was not met. With the output baselines calibrated on clean deployment data
+(Sect.~\ref{sec:calibration}), they reach $50\%$ alarms at $\rho = 0.2$, an
+accuracy drop of $7.8$ points; FEATHER, calibrated on the training reference
+($7\%$ clean false alarms), reaches it at $\rho = 0.3$ ($12.0$ points), and the
+full-space mean shift only at $\rho = 0.8$. Across the 20 single-superclass
+swaps, the accuracy drop correlates with the output scores (Spearman
+$0.85$--$0.87$) and negatively with FEATHER's blind fraction $s$ ($-0.86$): the
+more harmful the new subclass, the larger the share of its shift that lies in
+the sensitive directions. Subpopulation shift, like the hospital shift, is
+output-visible.
+
 \subsection{A Calibration Finding}
 \label{sec:calibration}
 
@@ -1145,9 +1167,11 @@ only semi-synthetically, with the drift injected in activation space and the
 harm set by a synthetic label rule. The natural shift we add on real data,
 WILDS Camelyon17 (Sect.~\ref{sec:wilds}), confirms that FEATHER tracks measured
 harm and holds its budget on genuinely out-of-domain hospitals, but that shift
-is output-visible, so it does not enter the silent regime either. A
-a natural shift that brings in differently labelled inputs whose outputs
-match the reference is the most valuable next step. A perturbation of a fixed
+is output-visible, so it does not enter the silent regime either, and
+neither does the pre-registered subpopulation shift of
+Sect.~\ref{sec:breeds}. A natural shift that brings in differently
+labelled inputs whose outputs match the reference remains the most
+valuable next step. A perturbation of a fixed
 input cannot serve: if its outputs and its label are both unchanged, so is
 its correctness. Held-out calibration only holds the clean false-alarm
 rate at budget when the reference data matches the deployment stream; where

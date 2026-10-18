@@ -130,7 +130,7 @@ foreach ($s in 0..4) {
 Scripts that take run folders expect them listed explicitly; in PowerShell pass
 `(Get-ChildItem outputs -Directory -Filter monitor_cifar10_seed*).FullName`.
 
-## Natural subpopulation shift (BREEDS, in progress)
+## Natural subpopulation shift (BREEDS)
 
 The open question from review: can drift the outputs cannot see be harmful on
 **real data with real labels**? Perturbing a fixed input cannot show it (if its
@@ -147,12 +147,23 @@ foreach ($s in 0..4) {
   python src\experiments\run_monitoring.py --model outputs\breeds_seed$s\final_model.pt `
       --mode breeds_cifar100 --out-name monitor_breeds_seed$s
 }
-python src\experiments\breeds_analysis.py (Get-ChildItem outputs -Directory -Filter monitor_breeds_seed*).FullName
+$runs = (Get-ChildItem outputs -Directory -Filter monitor_breeds_seed*).FullName
+python src\experiments\refit_baselines.py --baseline-calibration clean-heldout --runs $runs
+python src\experiments\breeds_analysis.py $runs
 ```
 
-About an hour of GPU time on an RTX-class card. The last command prints the
-per-`rho` alarm table and the primary / secondary / diagnostic verdicts, and
-writes `outputs/breeds_summary.json`.
+About an hour of GPU time on an RTX-class card. The refit calibrates the output
+baselines on held-out clean deployment data, as everywhere else in the paper
+(the analysis refuses runs without it). The last command prints the per-`rho`
+alarm table and the primary / secondary / diagnostic verdicts, and writes
+`outputs/breeds_summary.json`.
+
+**Result (5 seeds):** the pre-registered primary criterion was not met. At
+matched calibration the output baselines reach 50% alarms at rho = 0.2
+(7.8-point drop), FEATHER at rho = 0.3 (12.0 points). Harmful subclasses shift
+mainly along the *sensitive* directions (blind fraction vs. drop: Spearman
+-0.86), so this natural shift is output-visible, like Camelyon17, and the paper
+reports it as such.
 
 ## Results at a glance
 

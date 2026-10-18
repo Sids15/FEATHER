@@ -58,7 +58,7 @@ def _batch_slices(rows: list[dict]) -> list[slice]:
     return slices
 
 
-_CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00"}
+_CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00", "breeds_cifar100": "clean"}
 
 
 def refit_run(run_dir: Path, quantile: float | None = None,

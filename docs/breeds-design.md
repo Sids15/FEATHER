@@ -45,3 +45,24 @@ Subpopulation shift does exactly that, with every label real.
 Whatever the outcome, it is reported. If the outputs see the shift as well as
 FEATHER does, it is reported as a second natural output-visible shift (like
 WILDS Camelyon17), and the silent regime stays labelled semi-synthetic.
+
+## Outcome (added 2026-10-18, after the 5-seed run)
+
+The first scoring calibrated the output baselines on the training reference,
+which the model has memorized; they then alarmed on 100% of *clean* test
+batches, so that scoring was invalid. Rescored with the paper's standing
+protocol (output baselines calibrated on the first half of the clean
+deployment episode via `refit_baselines.py --baseline-calibration
+clean-heldout`; clean false alarms 0%), FEATHER unchanged (training-reference
+calibration, 7% clean false alarms):
+
+- **Primary: not met.** No rho has the output baselines below 20% while the
+  accuracy drop is >= 10 points.
+- **Secondary.** First rho with >= 50% alarms: output baselines 0.2 (7.8-point
+  drop), covariance ablation 0.2, FEATHER 0.3 (12.0 points), mean shift 0.8
+  (30.7 points).
+- **Diagnostic.** Spearman with accuracy drop over the 20 swaps: output scores
+  0.85-0.87, FEATHER score 0.39, blind fraction s -0.86.
+
+Per the reporting commitment, this is reported as a second natural
+output-visible shift; the silent regime stays labelled semi-synthetic.
