@@ -37,7 +37,8 @@ logger = logging.getLogger("feather.experiments.analysis")
 
 BENIGN_MAX_DROP = 0.02
 HARMFUL_MIN_DROP = 0.10
-CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00"}
+CLEAN_EPISODE = {"cifar10c": "clean", "rotated_mnist": "rotation_00",
+                 "breeds_cifar100": "clean"}
 BASELINE_MONITORS = ("atc", "conf", "entropy", "proxy")
 
 # Palette (dataviz reference, light mode).

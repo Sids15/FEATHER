@@ -9,12 +9,19 @@ Defaults (SGD 0.1, cosine, 50 epochs, batch 128) reach ~93-94% val accuracy
 in roughly 5-10 minutes on the RTX 4500 Ada. For the multi-seed benchmark run
 this once per seed (0..4). Outputs land in outputs/<run-name>/, the full log
 in logs/<run-name>.log. Dataset root: --data-root or FEATHER_DATA_DIR.
+
+--dataset breeds_cifar100 trains the same network on CIFAR-100's 20
+superclasses with one subclass per superclass held out (feather.data.breeds),
+the base model of the natural subpopulation-shift experiment:
+
+    python src/experiments/train_cifar10.py --dataset breeds_cifar100 --run-name breeds_seed0 --seed 0
 """
 
 from __future__ import annotations
 
 import argparse
 
+from feather.data.breeds import N_SUPERCLASSES, breeds_datasets
 from feather.data.vision import cifar10_datasets
 from feather.models import CifarResNet18
 from feather.training import TrainConfig, Trainer
@@ -24,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-name", required=True, help="unique run id (reuse with --resume auto)")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--dataset", default="cifar10", choices=["cifar10", "breeds_cifar100"])
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=0.1)
@@ -39,7 +47,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    train_ds, val_ds = cifar10_datasets(args.data_root, augment=not args.no_augment)
+    if args.dataset == "breeds_cifar100":
+        train_ds, val_ds = breeds_datasets(args.data_root, augment=not args.no_augment)
+        num_classes = N_SUPERCLASSES
+    else:
+        train_ds, val_ds = cifar10_datasets(args.data_root, augment=not args.no_augment)
+        num_classes = 10
     config = TrainConfig(
         run_name=args.run_name,
         seed=args.seed,
@@ -53,7 +66,7 @@ def main() -> None:
         num_workers=args.num_workers,
         device=args.device,
     )
-    trainer = Trainer(CifarResNet18(), train_ds, val_ds, config)
+    trainer = Trainer(CifarResNet18(num_classes=num_classes), train_ds, val_ds, config)
     trainer.fit(resume=args.resume)
 
 

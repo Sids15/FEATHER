@@ -75,3 +75,11 @@ def cifar10c_dir(override: str | Path | None = None) -> Path:
     directory = require_dir(root / "CIFAR-10-C", "CIFAR-10-C folder")
     require_file(directory / "labels.npy", "CIFAR-10-C labels.npy")
     return directory
+
+
+def cifar100_dir(override: str | Path | None = None) -> Path:
+    """Extracted CIFAR-100 python folder (cifar-100-python/{train,test,meta})."""
+    directory = require_dir(data_root(override) / "cifar-100-python", "CIFAR-100 folder")
+    for name in ("train", "test", "meta"):
+        require_file(directory / name, f"CIFAR-100 '{name}' file")
+    return directory

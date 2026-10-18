@@ -40,6 +40,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from feather.data.breeds import breeds_datasets, breeds_episodes
 from feather.data.vision import (
     CIFAR10C_CORRUPTIONS,
     SEVERITIES,
@@ -66,7 +67,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True, help="path to a final_model.pt")
     parser.add_argument("--mode", required=True,
-                        choices=["rotated_mnist", "cifar10c", "wilds_camelyon17"])
+                        choices=["rotated_mnist", "cifar10c", "wilds_camelyon17",
+                                 "breeds_cifar100"])
     parser.add_argument("--out-name", required=True, help="output folder name under outputs/")
     parser.add_argument("--batch-size", type=int, default=500, help="stream batch size")
     parser.add_argument("--quantile", type=float, default=0.99)
@@ -120,6 +122,8 @@ def episodes_for(args: argparse.Namespace):
             yield f"rotation_{angle:02d}", rotated_mnist_test(angle, args.data_root)
     elif args.mode == "wilds_camelyon17":
         yield from camelyon17_episodes(args.data_root)
+    elif args.mode == "breeds_cifar100":
+        yield from breeds_episodes(args.data_root, seed=args.seed)
     else:
         corruptions = args.corruptions or list(CIFAR10C_CORRUPTIONS)
         unknown = set(corruptions) - set(CIFAR10C_CORRUPTIONS)
@@ -150,6 +154,8 @@ def main() -> None:
         reference, _ = mnist_datasets(args.data_root)
     elif args.mode == "wilds_camelyon17":
         reference = camelyon17_reference(args.data_root)
+    elif args.mode == "breeds_cifar100":
+        reference, _ = breeds_datasets(args.data_root, augment=False)
     else:
         reference, _ = cifar10_datasets(args.data_root, augment=False)
 

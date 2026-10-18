@@ -22,6 +22,7 @@ $FEATHER_DATA_DIR/            ← git-ignored wherever it lives
 ├── CIFAR-10-C/               (extracted: 19 .npy corruption files + labels.npy)
 │   └── *.npy                 (20 files incl. labels.npy)
 ├── CIFAR-10-C.tar            (source tar — safe to delete once extracted)
+├── cifar-100-python/         (CIFAR-100, extracted: train, test, meta)
 └── MNIST/raw/                (4 idx files, gzipped or not — torchvision reads both)
 ```
 
@@ -30,6 +31,13 @@ $FEATHER_DATA_DIR/            ← git-ignored wherever it lives
 - URL: <https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz>
 - Put the file at `data/cifar-10-python.tar.gz` — **do not extract**; torchvision
   reads/extracts it itself with `root="data", download=False`.
+
+## 1b. CIFAR-100 (BREEDS subpopulation shift, docs/breeds-design.md) — ~161 MB
+
+- URL: <https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz>
+- **Extract it**, so `cifar-100-python/` (with `train`, `test`, `meta`) sits
+  directly under the data root. The loader reads these files itself because
+  torchvision's CIFAR100 does not expose the 20 superclass labels.
 
 ## 2. CIFAR-10-C (corruption streams, main benchmark) — ~2.9 GB
 
