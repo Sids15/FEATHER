@@ -14,6 +14,7 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{url}
 
 \newtheorem{proposition}{Proposition}
 \newtheorem{assumption}{Assumption}
@@ -32,31 +33,31 @@
 \title{FEATHER: Fisher-Eigenvalue Adaptive Thresholding for Error-Robust Drift Detection}
 
 \author{\IEEEauthorblockN{Rishabh Ahuja}
-\IEEEauthorblockA{\todo{Department} \\
-\todo{College/University}\\
-\todo{City, Country} \\
-\todo{email}}
+\IEEEauthorblockA{\textit{Department of Computer Engineering} \\
+\textit{STME, SVKM's NMIMS}\\
+Indore, India \\
+rishabhahuja961@gmail.com}
 \and
 \IEEEauthorblockN{Siddhant Bandi}
-\IEEEauthorblockA{\todo{Department} \\
-\todo{College/University}\\
-\todo{City, Country} \\
-\todo{email}}
+\IEEEauthorblockA{\textit{Department of Computer Engineering} \\
+\textit{STME, SVKM's NMIMS}\\
+Indore, India \\
+siddhantbandi15@gmail.com}
 \and
 \IEEEauthorblockN{Shruti Sharma}
-\IEEEauthorblockA{\todo{Department} \\
-\todo{College/University}\\
-\todo{City, Country} \\
-\todo{email}}}
+\IEEEauthorblockA{\textit{Department of Computer Engineering} \\
+\textit{STME, SVKM's NMIMS}\\
+Indore, India \\
+shruti.sharma@nmims.edu}}
 
 \maketitle
 
 \begin{abstract}
 Label-free monitors of a deployed classifier read its outputs: confidence,
 entropy, or a learned error proxy. All share one blind spot, which can be
-characterized exactly: for a $C$-class softmax head, the Fisher information of
+characterized exactly: for a C-class softmax head, the Fisher information of
 the log-likelihood with respect to the penultimate activation has rank at most
-$C-1$, and its orthogonal complement moves every logit equally, which the
+C-1, and its orthogonal complement moves every logit equally, which the
 softmax cancels. FEATHER monitors that complement: one offline pass gives the
 exact Fisher matrix and blind subspace, each online batch costs one
 projection, and a bootstrap fixes the false-alarm rate. On Rotated MNIST and
@@ -65,8 +66,8 @@ accuracy drop, the predicted rank structure shows up exactly (nine informative
 directions out of 512 in a ResNet-18), and the Fisher geometry nearly halves
 the benign false alarms of a covariance ablation (48\% vs.\ 83\% on
 CIFAR-10-C). A shift built inside the blind subspace of the trained ResNet-18
-changes no softmax output by more than $10^{-10}$, yet drops a synthetic
-accuracy from $99\%$ to $7\%$; FEATHER detects it on every batch while the
+changes no softmax output by more than 10\textsuperscript{-10}, yet drops a
+synthetic accuracy from 99\% to 7\%; FEATHER detects it on every batch while the
 output baselines register no change. On WILDS Camelyon17 and a pre-registered
 CIFAR-100 subpopulation shift FEATHER follows real harm, which the outputs
 also see; a two-stage cascade cuts its online cost.
@@ -106,7 +107,7 @@ labels. A blind-subspace shift can be benign, and a change in the label
 function with frozen features can reduce accuracy without any shift to detect.
 The subspace guarantees one implication: \emph{if} harmful drift lands there,
 no output-based monitor can see it. FEATHER (Fisher-Eigenvalue Adaptive
-Thresholding for Error-Robust drift detection) covers that blind spot with a
+Thresholding for Error-Robust Drift Detection) covers that blind spot with a
 calibrated signal, and we \emph{measure} harm from held-out labels rather than
 assume it. Our contributions are:
 \begin{enumerate}
@@ -566,7 +567,9 @@ harmful drift the outputs cannot express, complementing confidence-based tools
 in the one region they provably cannot reach.
 
 \section*{Acknowledgment}
-\todo{Acknowledgements: project guide, institution, and compute support.}
+The authors thank the School of Technology Management and Engineering
+(STME), SVKM's NMIMS, Indore for providing computational and GPU facilities
+to conduct this research. This research received no external grant funding.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
