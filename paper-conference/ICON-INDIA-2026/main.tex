@@ -19,7 +19,6 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{assumption}{Assumption}
 
-\newcommand{\todo}[1]{\textbf{[TODO: #1]}}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\F}{\mathbf{F}}
 \newcommand{\act}{\phi}
@@ -66,7 +65,7 @@ accuracy drop, the predicted rank structure shows up exactly (nine informative
 directions out of 512 in a ResNet-18), and the Fisher geometry nearly halves
 the benign false alarms of a covariance ablation (48\% vs.\ 83\% on
 CIFAR-10-C). A shift built inside the blind subspace of the trained ResNet-18
-changes no softmax output by more than 10\textsuperscript{-10}, yet drops a
+changes no softmax output by more than 10\textsuperscript{--10}, yet drops a
 synthetic accuracy from 99\% to 7\%; FEATHER detects it on every batch while the
 output baselines register no change. On WILDS Camelyon17 and a pre-registered
 CIFAR-100 subpopulation shift FEATHER follows real harm, which the outputs
