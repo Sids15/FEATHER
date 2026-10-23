@@ -1,4 +1,4 @@
-# INDICON 2026, Paper ID 5201: Response to Reviewers
+ INDICON 2026, Paper ID 5201: Response to Reviewers
 
 **Title:** Toward Label-Free Detection of Harmful Data Drift in Deployed Classifiers
 
@@ -10,10 +10,10 @@ ablation study, significance tests, detection delay and computational cost,
 an explicit statement of the assumptions, and an expanded limitations section.
 Section numbers below refer to the revised manuscript.
 
-## Reviewer 2
+ Reviewer 2
 
 **R2.1: Include an ablation study analyzing the contribution of each component.**
-Added Section VI-F, "Ablation Study", with Table III. It removes FEATHER's
+Added Section VI-D, "Ablation Study", with Table III. It removes FEATHER's
 components one at a time:
 - **Fisher subspace replaced by a covariance subspace of the same dimension.**
   Blind drift is still detected, but the variant alarms on 28% of clean, 83%
@@ -29,7 +29,7 @@ output-visible drift.
 **R2.2: Perform statistical significance testing.**
 All results are means ± standard deviation over five independently trained
 seeds. For the main comparison, benign false alarms of FEATHER against the
-covariance ablation, Section VI-E now reports:
+covariance ablation, Section VI-D now reports:
 - an exact paired sign-flip test over seeds (p = 0.0625, the minimum possible
   with five seeds);
 - an episode-level test: the gap is 34.4 points, with a 95% bootstrap CI of
@@ -65,19 +65,19 @@ It now includes recent work: PUDD (AAAI 2025), Komorniczak and Ksieniewicz
 - A new figure (Fig. 1) shows the measured Fisher eigenvalue spectrum.
 - The conceptual schematics are replaced by plots of measured results.
 
-## Reviewer 3
+ Reviewer 3
 
 **R3.1: More extensive evaluation on real-world datasets and deployed models.**
 The revision evaluates trained deep networks on four real datasets, five seeds
 per model:
 - **Rotated MNIST and CIFAR-10-C** (CNN and ResNet-18; 480 CIFAR-10-C episodes
-  labelled by measured accuracy drop): Sections VI-B and VI-E.
+  labelled by measured accuracy drop): Sections VI-B and VI-D.
 - **Silent drift on the trained ResNet-18:** Section VI-C, Table I.
 - **WILDS Camelyon17**, a real hospital-to-hospital shift on histopathology:
-  Section VI-G.
+  Section VI-D.
 - **A pre-registered CIFAR-100 subpopulation shift** (BREEDS protocol),
   reported honestly although its pre-registered criterion was not met:
-  Section VI-G.
+  Section VI-D.
 
 **R3.2: Clearer comparison with existing label-free techniques (accuracy,
 false-alarm rate, cost, delay).**
@@ -90,9 +90,9 @@ full-space mean shift:
 - **Detection delay:** every monitor alarms on the first batch of harmful
   episodes. On gray episodes FEATHER alarms on the first batch, against
   1.17–1.47 batches on average (up to 10) for the output baselines
-  (Section VI-E).
+  (Section VI-D).
 - **Cost:** FEATHER takes 3.0 ms per 500-image batch on a laptop CPU, against
-  0.05 ms for the mean-shift gate (Section VI-H). The offline fit takes 11.1 s.
+  0.05 ms for the mean-shift gate (Section VI-D). The offline fit takes 11.1 s.
 
 **R3.3: Explain and justify the assumptions behind the Fisher analysis and
 the output-invisible subspace.**
@@ -127,7 +127,7 @@ Section VII now covers:
 - **pure concept shift;**
 - **the semi-synthetic nature of the silent-drift result.**
 
-## Mandatory formatting instructions
+ Mandatory formatting instructions
 
 - **Title:** in Title Case.
 - **Authors:** no honorifics or designations; numeric affiliation
