@@ -571,8 +571,8 @@ For the ResNet-18 the offline fit, including the forward passes over
 $O(nd^2 + d^3)$ fit remains seconds at $d \approx 4096$
 \cite{halko2011structure}. Since FEATHER's statistic is the blind part of
 $\lVert\Delta\mu\rVert$, the full-space shift (0.05 ms) serves as a gate, and
-the projection runs only when it alarms. On
-CIFAR-10-C the cascade matches FEATHER-always on harmful episodes ($0.80$
+the projection runs only when it alarms. On CIFAR-10-C streams that open with five clean batches, so that at
+most $0.80$ of batches are drifted, the cascade matches FEATHER-always on harmful episodes ($0.80$
 vs.\ $0.82$ of batches) and alarms on $16\%$ of benign batches against $40\%$;
 on Rotated MNIST the gate fires on almost every batch, so it saves nothing.
 
