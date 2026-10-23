@@ -31,6 +31,8 @@
 \fancyfoot[C]{INDICON 2026}
 \renewcommand{\headrulewidth}{0pt} % Remove the horizontal line
 
+% IEEEtran theorems create no hyperref anchor; phantomsection before each
+% theorem label gives Proposition/Assumption links their own target.
 % added for this paper: theorem environments and notation
 \newtheorem{proposition}{Proposition}
 \newtheorem{assumption}{Assumption}
@@ -316,7 +318,7 @@ Fisher needs no further assumption, since both share the null space
 (Section~\ref{sec:blind}).
 
 \begin{assumption}
-\label{ass:span}
+\phantomsection\label{ass:span}
 The reference gradients $\{g_i\}$ span $W^\top\!\mathcal{H}$. This holds
 almost surely once $C$ generic samples are seen, since a degenerate set of
 residuals has measure zero; empirically we observe the full rank $C-1$ in
@@ -330,7 +332,7 @@ blind direction is missed, and the extra directions are output-visible ones
 the output baselines already cover.
 
 \begin{proposition}[Detector blindness]
-\label{prop:blind}
+\phantomsection\label{prop:blind}
 Under Assumption~\ref{ass:span},
 $\mathcal{N} = \{\, u \in \R^d : Wu \in \spn\{\mathbf{1}\} \,\}$, the set of
 softmax-invariant directions. Any drift that only translates activations
