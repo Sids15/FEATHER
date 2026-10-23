@@ -45,6 +45,8 @@
 \DeclareMathOperator*{\softmax}{softmax}
 
 \begin{document}
+% IEEE reference style: more than six authors -> first author et al.
+\bstctlcite{IEEEexample:BSTcontrol}
 
 \title{Toward Label-Free Detection of Harmful Data Drift in Deployed Classifiers}
 
@@ -72,10 +74,10 @@ shruti.sharma@nmims.edu}
 
 \begin{abstract}
 Label-free monitors of a deployed classifier read its outputs: confidence,
-entropy, or a learned error proxy. All share one blind spot, which can be
-characterized exactly: for a C-class softmax head, the Fisher information of
-the log-likelihood with respect to the penultimate activation has rank at most
-C-1, and its orthogonal complement moves every logit equally, which the
+entropy, or a learned error proxy. All of them miss the same region, and its
+extent can be computed: in a classifier whose softmax head has C classes, the
+Fisher information that the log-likelihood carries about the penultimate
+activation has rank no greater than C-1, and its orthogonal complement moves every logit equally, which the
 softmax cancels. FEATHER monitors that complement: one offline pass gives the
 exact Fisher matrix and blind subspace, each online batch costs one
 projection, and a bootstrap fixes the false-alarm rate. On Rotated MNIST and
@@ -218,8 +220,8 @@ monitor can enter.
 \subsection{Activation-Space Fisher Matrix and Blind Subspace}
 \label{sec:blind}
 
-We monitor the empirical Fisher information of the log-likelihood \emph{with
-respect to the activation},
+FEATHER is built on the empirical Fisher matrix of the log-likelihood, taken
+over the \emph{activation} rather than the parameters,
 \begin{equation}
   \F = \frac{1}{n}\sum_{i=1}^{n} g_i g_i^\top,
   \quad
@@ -684,9 +686,9 @@ harmful drift the outputs cannot express, complementing confidence-based tools
 in the one region they provably cannot reach.
 
 \section*{Acknowledgment}
-The authors thank the School of Technology Management and Engineering
-(STME), SVKM's NMIMS, Indore for providing computational and GPU facilities
-to conduct this research. This research received no external grant funding.
+The GPU and computing resources used in this work were provided by STME,
+SVKM's NMIMS Indore, to whom the authors are grateful. No external grant
+funded this research.
 
 \bibliographystyle{IEEEtran}
 \bibliography{References}
