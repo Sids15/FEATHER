@@ -1,6 +1,6 @@
 % FEATHER — INDICON 2026 revised manuscript (Paper ID 5201, IEEEtran).
-% Built from the ICon INDIA version (same numbers), retitled to the accepted
-% title, cut to the 15-reference limit, numbered-superscript affiliations.
+% Revised per the CMT reviews: real-data evaluation, ablation, significance,
+% delay/cost, assumptions, limitations; 15 references; numbered affiliations.
 % Compile with pdfLaTeX + BibTeX: main.tex + references.bib + figures/ +
 % IEEEtran.cls + IEEEtran.bst (all in this folder).
 
@@ -71,7 +71,8 @@ label-free evaluation
 \label{sec:intro}
 
 A classifier accurate at deployment does not stay so, because its input
-distribution keeps changing. Monitoring for this \emph{concept drift} is
+distribution keeps changing, a main source of hidden technical debt in
+production machine learning \cite{sculley2015debt}. Monitoring for this \emph{concept drift} is
 difficult because the labels that would establish whether the model is still
 correct arrive late, or not at all \cite{gama2014survey}.
 Practitioners therefore rely on label-free proxies. One family monitors the
@@ -106,7 +107,8 @@ assume it. Our contributions are:
     cost, and thresholds set to a chosen false-alarm budget;
   \item an evaluation with harm measured from held-out labels on Rotated MNIST
     and CIFAR-10-C, a deep-feature experiment that exposes the blind spot on a
-    trained ResNet-18, and two natural shifts with real labels;
+    trained ResNet-18, two natural shifts with real labels, and an ablation
+    with significance tests, detection delay, and cost;
   \item a two-stage cascade that runs FEATHER only on batches flagged by an
     inexpensive full-space shift gate.
 \end{enumerate}
@@ -114,15 +116,19 @@ assume it. Our contributions are:
 \section{Literature Review}
 \label{sec:related}
 
-\textit{Drift detection.}
-Error-rate detectors such as ADWIN \cite{bifet2007adwin} tie alarms to
-performance but require labels, which a deployed stream rarely provides
-\cite{gama2014survey}. Distribution-level tests avoid labels but say nothing
-about performance: Rabanser et al.\ \cite{rabanser2019failing} showed that
-detection strength and damage are poorly aligned, and left \emph{harmful}
-shift as an open problem.
+\textit{Concept drift detection.}
+Classical drift detectors, surveyed by Gama et al.\ \cite{gama2014survey},
+monitor the online error rate. They tie alarms to performance but require
+labels, which a deployed stream rarely provides. Recent work reduces this
+dependence: PUDD \cite{pudd2025} detects concept drift early from the
+prediction uncertainty of the model. Distribution-level tests avoid labels
+entirely but say nothing about performance: Rabanser et al.\
+\cite{rabanser2019failing} showed that detection strength and damage are
+poorly aligned, and left \emph{harmful} shift as an open problem. For a
+production system this matters, because a monitor that raises frequent
+irrelevant alarms is eventually ignored \cite{sculley2015debt}.
 
-\textit{Confidence and label-free accuracy estimation.}
+\textit{Label-free performance monitoring.}
 The maximum-softmax-probability baseline \cite{hendrycks2017baseline} infers
 model health from the model's own confidence, and ATC \cite{garg2022atc}
 refines it into an accuracy estimate. Confidence, however, becomes unreliable
@@ -132,20 +138,29 @@ sequential harmful-shift detection with an error proxy, the framing we adopt.
 Every method here draws its signal from the outputs and therefore inherits the
 blind spot of Proposition~\ref{prop:blind}.
 
-\textit{Feature space.}
-The Mahalanobis method \cite{lee2018mahalanobis} scores samples against
-class-conditional Gaussians in the penultimate space, the strongest detector
-of Rabanser et al.\ tests the representations \cite{rabanser2019failing}, and
-NEO \cite{murphy2026neo} re-centers test features by the displacement of their
-centroid. None of these asks \emph{which} directions the model's decisions
-depend on, and none separates the directions the outputs can register from
-those they cannot.
+\textit{Representation-space monitoring.}
+The strongest detector of Rabanser et al.\ tests the learned representations
+rather than the raw inputs \cite{rabanser2019failing}. Komorniczak and
+Ksieniewicz \cite{komorniczak2024parallel} detect drift without labels from
+the parallel activation patterns of a network, and the recent test-time
+adaptation method NEO \cite{murphy2026neo} re-centers test features by the
+displacement of their centroid. These methods weight representation
+directions by variance or density. None of them asks \emph{which} directions
+the model's decisions depend on, and none separates the directions the
+outputs can register from those they cannot.
 
 \textit{Fisher geometry.}
 Zhang et al.\ \cite{zhang2023score} monitor drift through the parameter-space
 Fisher score vector, which requires labels on the stream. Our Fisher matrix is
 taken with respect to the activation and computed once offline, and its exact
 rank deficiency defines the subspace that FEATHER monitors.
+
+\textit{Research gap.}
+Existing label-free monitors therefore either read the outputs, and share
+their blind spot, or weight representation directions without reference to
+the decision. FEATHER uses the decision geometry of the deployed model to
+isolate exactly the directions output monitors cannot see, and calibrates its
+alarm on them to a chosen false-alarm budget.
 
 \section{Problem Setup}
 \label{sec:setup}
@@ -225,6 +240,20 @@ disjoint \emph{calibration} split supplies $\mu_{\mathrm{ref}}$ and the
 thresholds; calibrating on the fitting split would make them optimistic.
 Algorithm~\ref{alg:feather} assembles the parts.
 
+\subsection{Computational Complexity}
+\label{sec:complexity}
+
+Since $g_i = W^\top r_i$ with residual $r_i = e_{y_i} - p_i$,
+\eqref{eq:fisher} factors as $\F = W^\top M W$ with the $C \times C$ matrix
+$M = \frac{1}{n}\sum_i r_i r_i^\top$. Forming $M$ costs $O(nC^2)$, and the
+sensitive subspace $\mathcal{S}$ has at most $C-1$ dimensions, so it can be
+obtained from a decomposition of a $d \times C$ matrix in $O(dC^2)$ rather
+than from a dense $d \times d$ eigendecomposition. Online, the blind component
+of any vector is the residual after projecting onto $\mathcal{S}$, so $m_t$
+costs $O(dC)$ and $v_t$ costs $O(|B_t|\,dC)$ per batch. The cost therefore
+grows linearly with the feature dimension $d$, which keeps the method
+applicable to wide, high-dimensional models.
+
 \begin{algorithm}[t]
 \caption{FEATHER}
 \label{alg:feather}
@@ -245,11 +274,26 @@ Algorithm~\ref{alg:feather} assembles the parts.
 \section{Theory}
 \label{sec:theory}
 
+The analysis rests on four assumptions, each of which can be checked in
+practice. (i) The deployed model is frozen and ends in a linear softmax head
+on the penultimate activation, which holds for standard classifiers; FEATHER
+needs only $W$, $b$, and the activations. (ii) A labeled held-out reference
+set drawn from the deployment distribution at launch is available once,
+offline; Section~\ref{sec:limitations} shows what happens when it does not
+match the deployment stream. (iii) Clean reference batches are exchangeable,
+so the bootstrap quantiles bound the false-alarm rate of each statistic by
+$\alpha$, and that of FEATHER, which alarms on either of two statistics, by
+$2\alpha$. (iv) The reference gradients span the subspace the rank bound
+allows, stated precisely below. The use of the empirical rather than the true
+Fisher needs no further assumption, since both share the null space
+(Section~\ref{sec:blind}).
+
 \begin{assumption}
 \label{ass:span}
 The reference gradients $\{g_i\}$ span $W^\top\!\mathcal{H}$. This holds
-almost surely once $C$ generic samples are seen; empirically we observe the
-full rank $C-1$ in every run.
+almost surely once $C$ generic samples are seen, since a degenerate set of
+residuals has measure zero; empirically we observe the full rank $C-1$ in
+every run (Fig.~\ref{fig:spectrum}).
 \end{assumption}
 
 If a class is absent from, or very rare in, the reference set, or the head is
@@ -325,11 +369,21 @@ drift of four standard deviations moves the outputs by less than $10^{-10}$,
 leaves the frozen Bayes classifier's accuracy unchanged ($93.3\%$ before,
 $93.2\%$ after), and is flagged on all 15 post-onset batches; sensitive drift,
 which cuts accuracy to $53.5\%$, is left to the output monitors. On the trained
-networks the rank bound \eqref{eq:rank} appears exactly: in all ten runs,
-exactly nine eigenvalues clear machine precision, and on a representative
-CIFAR-10 seed $\lambda_9 = 9.1 \times 10^{-5}$ while
+networks the rank bound \eqref{eq:rank} appears exactly. Fig.~\ref{fig:spectrum}
+shows that in all ten runs exactly nine eigenvalues clear machine precision;
+on a representative CIFAR-10 seed $\lambda_9 = 9.1 \times 10^{-5}$ while
 $\lambda_{10} = 5 \times 10^{-19}$. The blind subspace is thus 503 of 512
 dimensions ($119$ of $128$ for the MNIST CNN).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\columnwidth]{figures/fisher_spectrum}
+\caption{Top twelve eigenvalues of the activation-space Fisher matrix, five
+seeds per model (thin lines) and their mean (markers). Both 10-class models
+show exactly $C-1=9$ informative eigenvalues followed by a drop of about
+fourteen orders of magnitude, as the rank bound \eqref{eq:rank} predicts.}
+\label{fig:spectrum}
+\end{figure}
 
 \subsection{Blind-Subspace Shift Tracks Measured Harm}
 \label{sec:saturation}
@@ -422,8 +476,12 @@ sparing accuracy; a three-consecutive-batch run rule lowers this only to
 $0.32 \pm 0.07$ (the output baselines' to at most $0.01$). Against its own
 covariance ablation, however, FEATHER is clearly superior: the ablation alarms
 on $82.9 \pm 6.9\%$ of benign batches, a gap of $35.3 \pm 3.6$ points that
-stays positive on every seed (an exact paired sign-flip test gives
-$p = 0.0625$, the smallest this design can produce). Low-variance directions
+stays positive on every seed (an exact paired sign-flip test over seeds gives
+$p = 0.0625$, the smallest possible with five seeds). At the episode level the
+gap is $34.4$ points (95\% bootstrap confidence interval $[27.9, 41.1]$), and a
+paired sign-flip test over the 62 benign episodes gives $p < 10^{-4}$; the
+ablation alarms more often than FEATHER in $77\%$ of benign episodes and less
+often in none. Low-variance directions
 move under benign corruption and even clean resampling (the ablation's $28\%$
 clean rate); low-Fisher directions do not. The full-space mean shift alarms on
 fewer benign batches than FEATHER ($0.20 \pm 0.03$, lower on every seed), but
@@ -433,6 +491,12 @@ At matched calibration, recalibrating FEATHER on a held-out split of the clean
 CIFAR-10-C and $0.08 \pm 0.04$ on MNIST, and it still alarms on fewer benign
 shifts than the ablation ($0.59 \pm 0.05$ vs.\ $0.67 \pm 0.05$) while both
 detect every harmful one.
+
+\textit{Detection delay.} We measure delay as the number of batches from the
+first shifted batch to the first alarm. Every monitor alarms on the first
+batch of every harmful episode. On gray episodes FEATHER and the covariance
+ablation again alarm on the first batch, while the output baselines need
+$1.17$--$1.47$ batches on average and up to ten in the worst case.
 
 \begin{table}[t]
 \caption{Batch-level alarm rates on CIFAR-10-C (mean over five seeds). Output
@@ -453,6 +517,46 @@ Error proxy \cite{amoukou2024sequential} & $0.00$ & $\mathbf{0.06}$ & $0.88$ & $
 Mean shift $\lVert\Delta\mu_t\rVert$ & $0.00$ & $0.20$ & $0.94$ & $1.00$ \\
 Covariance ablation & $0.28$ & $0.83$ & $1.00$ & $1.00$ \\
 FEATHER & $0.02$ & $0.48$ & $1.00$ & $1.00$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Ablation Study}
+\label{sec:ablation}
+
+FEATHER combines three components: a subspace chosen by the Fisher spectrum,
+the restriction of the shift statistic to that subspace, and calibration on
+held-out data. Table~\ref{tab:ablation} removes the first two one at a time
+and reports each variant on clean and benign CIFAR-10-C batches and on the
+silent-drift experiment of Section~\ref{sec:blinddeep} ($\alpha=0.3$, blind
+shift and sensitive control). Replacing the Fisher subspace by the
+covariance subspace of the same dimension keeps the detection of blind drift
+but loses selectivity: the variant alarms on $28\%$ of clean, $83\%$ of benign,
+and $89\%$ of sensitive-control batches, the last being drift the output
+monitors already see. Removing the subspace restriction, i.e.\ using the
+full-space mean shift, lowers benign alarms to $20\%$ but detects only $41\%$
+of blind-drift batches, because clean-batch noise in the sensitive directions
+raises its threshold. Only the Fisher subspace both detects blind drift and
+stays silent on output-visible drift. Removing held-out calibration, i.e.\
+setting thresholds on the training reference when it does not match the
+deployment stream, makes FEATHER alarm on every clean MNIST test batch;
+calibrated on held-out clean test data, its rate falls to $8\%$.
+
+\begin{table}[t]
+\caption{Ablation of FEATHER's components (mean alarm rates over five seeds).
+Clean and benign: CIFAR-10-C batches. Blind and sensitive: silent-drift
+experiment at $\alpha=0.3$ (Section~\ref{sec:blinddeep}).}
+\label{tab:ablation}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\hline
+Variant & Clean & Benign & Blind & Sensitive \\
+\hline
+FEATHER (Fisher subspace) & $0.02$ & $0.48$ & $\mathbf{1.00}$ & $\mathbf{0.02}$ \\
+Covariance subspace & $0.28$ & $0.83$ & $1.00$ & $0.89$ \\
+Full space (mean shift) & $0.00$ & $0.20$ & $0.41$ & $0.46$ \\
 \hline
 \end{tabular}
 \end{table}
@@ -493,7 +597,9 @@ shift, too, is output-visible.
 
 For the ResNet-18 the offline fit, including the forward passes over
 50{,}000 images, takes 11.1 s; online, FEATHER's statistics take 3.0 ms per
-500-image batch on a laptop CPU, small next to the forward pass. Since FEATHER's statistic is the blind part of
+500-image batch on a laptop CPU, small next to the forward pass. The output
+baselines cost only a reduction over softmax outputs the model already
+produces. Since FEATHER's statistic is the blind part of
 $\lVert\Delta\mu\rVert$, the full-space shift (0.05 ms) serves as a gate, and
 the projection runs only when it alarms. On CIFAR-10-C the cascade matches
 FEATHER-always on harmful episodes ($0.80$ vs.\ $0.82$ of batches) and alarms
@@ -519,9 +625,21 @@ that brings in differently labelled inputs whose outputs match the reference
 remains the most valuable next step. Held-out calibration holds the clean
 false-alarm rate at budget only when the reference data matches the deployment
 stream: calibrated on its training split, FEATHER alarms on every clean MNIST
-test batch, and on $8\%$ once recalibrated on clean test data. Finally, the
-blind subspace belongs to the penultimate layer; a Kronecker-factored Fisher
-\cite{martens2015kfac} would extend it to intermediate layers.
+test batch, and on $8\%$ once recalibrated on clean test data.
+
+Mixed drift, which moves the activations along sensitive and blind
+directions at once, is split by construction: FEATHER responds only to the
+blind component, and the direction ratio $s_t$ reports what fraction of the
+shift it accounts for, while the sensitive component is left to the output
+monitors. A deployment should therefore run both; we have not evaluated
+streams in which the two components change at different times. For
+high-dimensional models the cost grows linearly in $d$
+(Section~\ref{sec:complexity}), but the blind subspace then covers an even
+larger share of the representation, so the bootstrap thresholds need enough
+clean reference batches to estimate the noise of a high-dimensional
+projection. Finally, the blind subspace belongs to the penultimate layer; a
+Kronecker-factored approximation of the Fisher matrix would extend it to
+intermediate layers.
 
 \section{Conclusion}
 \label{sec:conclusion}
