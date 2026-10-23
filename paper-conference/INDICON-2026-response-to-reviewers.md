@@ -13,7 +13,7 @@ Section numbers below refer to the revised manuscript.
  Reviewer 2
 
 **R2.1: Include an ablation study analyzing the contribution of each component.**
-Added Section VI-D, "Ablation Study", with Table III. It removes FEATHER's
+Added Section VI-E, "Ablation Study", with Table III. It removes FEATHER's
 components one at a time:
 - **Fisher subspace replaced by a covariance subspace of the same dimension.**
   Blind drift is still detected, but the variant alarms on 28% of clean, 83%
@@ -74,10 +74,10 @@ per model:
   labelled by measured accuracy drop): Sections VI-B and VI-D.
 - **Silent drift on the trained ResNet-18:** Section VI-C, Table I.
 - **WILDS Camelyon17**, a real hospital-to-hospital shift on histopathology:
-  Section VI-D.
+  Section VI-F.
 - **A pre-registered CIFAR-100 subpopulation shift** (BREEDS protocol),
   reported honestly although its pre-registered criterion was not met:
-  Section VI-D.
+  Section VI-F.
 
 **R3.2: Clearer comparison with existing label-free techniques (accuracy,
 false-alarm rate, cost, delay).**
@@ -92,7 +92,7 @@ full-space mean shift:
   1.17–1.47 batches on average (up to 10) for the output baselines
   (Section VI-D).
 - **Cost:** FEATHER takes 3.0 ms per 500-image batch on a laptop CPU, against
-  0.05 ms for the mean-shift gate (Section VI-D). The offline fit takes 11.1 s.
+  0.05 ms for the mean-shift gate (Section VI-G). The offline fit takes 11.1 s.
 
 **R3.3: Explain and justify the assumptions behind the Fisher analysis and
 the output-invisible subspace.**
